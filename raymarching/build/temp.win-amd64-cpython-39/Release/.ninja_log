@@ -1,0 +1,5 @@
+# ninja log v5
+8	12062	7126152747400041	C:/Users/Yash Panchal/Desktop/meshGeneratorV1/raymarching/build/temp.win-amd64-cpython-39/Release/Users/Yash Panchal/Desktop/meshGeneratorV1/raymarching/src/bindings.obj	2667ce78b4c8d5e9
+14	30967	7126152936019040	C:/Users/Yash Panchal/Desktop/meshGeneratorV1/raymarching/build/temp.win-amd64-cpython-39/Release/Users/Yash Panchal/Desktop/meshGeneratorV1/raymarching/src/raymarching.obj	ff0bd116f5e90023
+22	10783	7136426906773170	C:/Users/Yash Panchal/Desktop/meshGenerator/raymarching/build/temp.win-amd64-cpython-39/Release/Users/Yash Panchal/Desktop/meshGenerator/raymarching/src/bindings.obj	2735596f157b71cf
+27	30077	7136427099453155	C:/Users/Yash Panchal/Desktop/meshGenerator/raymarching/build/temp.win-amd64-cpython-39/Release/Users/Yash Panchal/Desktop/meshGenerator/raymarching/src/raymarching.obj	7d0c04872119f410
