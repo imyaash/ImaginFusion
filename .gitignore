@@ -41,3 +41,4 @@ sdm/pretrained/stabilityai/stable-diffusion-2-1/unet/config.json
 sdm/pretrained/stabilityai/stable-diffusion-2-1/unet/diffusion_pytorch_model.bin
 sdm/pretrained/stabilityai/stable-diffusion-2-1/vae/config.json
 sdm/pretrained/stabilityai/stable-diffusion-2-1/vae/diffusion_pytorch_model.bin
+outputs/

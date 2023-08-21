@@ -2,8 +2,8 @@ from NeRF.pipe import Pipeline
 from utils.args import Args
 
 args = Args(
-    posPrompt = "ultra-realistic, classic coca-cola bottle",
-    workspace = "testCoke",
+    posPrompt = "ultra-realistic, delicious hamburger",
+    workspace = "testHamburger",
     fp16 = True,
     seed = 0,
     iters = 5000,

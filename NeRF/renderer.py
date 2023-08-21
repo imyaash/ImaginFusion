@@ -24,7 +24,6 @@ class Renderer(nn.Module):
         self.maxLevel = None
         self.minNear = args.minNear
         self.densityThresh = args.densityThresh
-
         aabbTrain = torch.FloatTensor([-args.bound, -args.bound, -args.bound, args.bound, args.bound, args.bound])
         aabbInfer = aabbTrain.clone()
         self.register_buffer("aabbTrain", aabbTrain)
@@ -88,9 +87,10 @@ class Renderer(nn.Module):
         )
         vertices, traingles = meshDecimator(
             vertices, traingles, decimateTarget
-        ) if decimateTarget > 0 and traingles.shape[0] > decimateTarget else (vertices, traingles)
+        ) if decimateTarget > 0 and traingles.shape[0] > decimateTarget else vertices, traingles
         v = torch.from_numpy(vertices).contiguous().float().to(self.aabbTrain.device)
         f = torch.from_numpy(traingles).contiguous().int().to(self.aabbTrain.device)
+
         def export(v, f, h0 = 2048, w0 = 2048, ssaa = 1, name = ""):
             device = v.device
             npV = v.cpu().numpy()
@@ -175,8 +175,9 @@ class Renderer(nn.Module):
         N = raysO.shape[0]
         device = raysO.device
         nears, fars = raymarching.near_far_from_aabb(raysO, raysD, self.aabbTrain if self.training else self.aabbInfer)
-        if lightD is None:
-            lightD = safeNormalise(raysO + torch.randn(3, device = raysO.device))
+        lightD = safeNormalise(raysO + torch.randn(3, device = raysO.device)) if lightD is None else lightD
+        # if lightD is None:
+        #     lightD = safeNormalise(raysO + torch.randn(3, device = raysO.device))
         results = {}
         if self.training:
             xyzs, dirs, ts, rays = raymarching.march_rays_train(
@@ -237,10 +238,11 @@ class Renderer(nn.Module):
                 raysAlive = raysAlive[raysAlive >= 0]
                 step += nStep
         if bgColor is None:
-            if self.args.bgRadius > 0:
-                bgColor = self.background(raysD)
-            else:
-                bgColor = 1
+            bgColor = self.background(raysD) if self.args.bgRadius > 0 else 1
+            # if self.args.bgRadius > 0:
+            #     bgColor = self.background(raysD)
+            # else:
+            #     bgColor = 1
         image = image + (1 - weightsSum).unsqueeze(-1) * bgColor
         image = image.view(*prefix, 3)
         depth = depth.view(*prefix)
@@ -260,7 +262,7 @@ class Renderer(nn.Module):
             for y in Y:
                 for z in Z:
                     xx, yy, zz = customMeshGrid(x, y, z)
-                    coords = torch.cat([x.reshape(-1, 1), y.reshape(-1, 1), z.reshape(-1, 1)], dim = -1)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim = -1)
                     indices = raymarching.morton3D(coords).long()
                     xyzs = 2 * coords.float() / (self.gridSize - 1) - 1
                     for c in range(self.cascade):
@@ -278,7 +280,4 @@ class Renderer(nn.Module):
         self.densityBitfield = raymarching.packbits(self.densityGrid, densityThresh, self.densityBitfield)
 
     def render(self, raysO, raysD, **kwargs):
-        B, N = raysO.shape[:2]
-        device = raysO.device
-        results = self.run(raysO = raysO, raysD = raysD, **kwargs)
-        return results
+        return self.run(raysO = raysO, raysD = raysD, **kwargs)
