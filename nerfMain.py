@@ -4,7 +4,7 @@ import torch
 from NeRF.provider import Dataset
 from NeRF.model import NeRF
 from NeRF.trainer import Trainer
-from utils.optimizer import Adan
+from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
 from utils.functions import seeder
 

@@ -17,7 +17,7 @@ class Trainer(object):
     def __init__(
             self,
             expName,
-            opt,
+            args,
             model,
             guidance,
             criterion = None,
@@ -36,7 +36,7 @@ class Trainer(object):
             schedulerUpdateEveryStep = False
     ):
         self.expName = expName
-        self.opt = opt
+        self.args = args
         self.verbose = verbose
         self.metrics = metrics
         self.workspace = workspace
@@ -103,16 +103,16 @@ class Trainer(object):
             self.bestPath = f"{self.ckptPath}/{self.expName}.pth"
             os.makedirs(self.ckptPath, exist_ok = True)
         
-        self.log(f'[INFO] opt: {self.opt}')
+        self.log(f'[INFO] args: {self.args}')
         self.log(f'[INFO] Trainer: {self.expName} | {self.timeStamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
         self.log(f'[INFO] #parameters: {sum([p.numel() for p in model.parameters() if p.requires_grad])}')
 
     @torch.no_grad()
     def prepareEmbeddings(self):
-        self.embeddings["default"] = self.guidance.getTextEmbeddings([self.opt.posPrompt])
-        self.embeddings["uncond"] = self.guidance.getTextEmbeddings([self.opt.negPrompt])
+        self.embeddings["default"] = self.guidance.getTextEmbeddings([self.args.posPrompt])
+        self.embeddings["uncond"] = self.guidance.getTextEmbeddings([self.args.negPrompt])
         for d in ["front", "side", "back"]:
-            self.embeddings[d] = self.guidance.getTextEmbeddings([f"{self.opt.posPrompt}, {d} view"])
+            self.embeddings[d] = self.guidance.getTextEmbeddings([f"{self.args.posPrompt}, {d} view"])
         
     def __del__(self):
         if self.logPtr:
@@ -124,28 +124,28 @@ class Trainer(object):
             self.logPtr.flush()
     
     def train_step(self, data):
-        expIterRatio = (self.globalStep - self.opt.expStartIter) / (self.opt.expEndIter - self.opt.expStartIter)
+        expIterRatio = (self.globalStep - self.args.expStartIter) / (self.args.expEndIter - self.args.expStartIter)
 
-        if self.opt.progressiveView:
-            r = min(1.0, self.opt.progressiveViewInitRatio + 2.0 * expIterRatio)
-            self.opt.phiRange = [
-                self.opt.defaultAzimuth * (1 - r) + self.opt.fullPhiRange[0] * r,
-                self.opt.defaultAzimuth * (1 - r) + self.opt.fullPhiRange[1] * r
+        if self.args.progressiveView:
+            r = min(1.0, self.args.progressiveViewInitRatio + 2.0 * expIterRatio)
+            self.args.phiRange = [
+                self.args.defaultAzimuth * (1 - r) + self.args.fullPhiRange[0] * r,
+                self.args.defaultAzimuth * (1 - r) + self.args.fullPhiRange[1] * r
             ]
-            self.opt.thetaRange = [
-                self.opt.defaultPolar * (1 - r) + self.opt.fullThetaRange[0] * r,
-                self.opt.defaultPolar * (1 - r) + self.opt.fullThetaRange[1] * r
+            self.args.thetaRange = [
+                self.args.defaultPolar * (1 - r) + self.args.fullThetaRange[0] * r,
+                self.args.defaultPolar * (1 - r) + self.args.fullThetaRange[1] * r
             ]
-            self.opt.radiusRange = [
-                self.opt.defaultRadius * (1 - r) + self.opt.fullRadiusRange[0] * r,
-                self.opt.defaultRadius * (1 - r) + self.opt.fullRadiusRange[1] * r
+            self.args.radiusRange = [
+                self.args.defaultRadius * (1 - r) + self.args.fullRadiusRange[0] * r,
+                self.args.defaultRadius * (1 - r) + self.args.fullRadiusRange[1] * r
             ]
-            self.opt.fovyRange = [
-                self.opt.defaultFovy * (1 - r) + self.opt.fullFovyRange[0] * r,
-                self.opt.defaultFovy * (1 - r) + self.opt.fullFovyRange[1] * r,
+            self.args.fovyRange = [
+                self.args.defaultFovy * (1 - r) + self.args.fullFovyRange[0] * r,
+                self.args.defaultFovy * (1 - r) + self.args.fullFovyRange[1] * r,
             ]
         
-        if self.opt.progressiveLevel:
+        if self.args.progressiveLevel:
             self.model.max_level = min(1.0, 0.25 + 2.0 * expIterRatio)
         
         raysO = data["raysO"]
@@ -155,14 +155,14 @@ class Trainer(object):
         B, N = raysO.shape[:2]
         H, W = data["H"], data["W"]
 
-        if B > self.opt.batchSize:
-            choice = torch.randperm(B)[:self.opt.batchSize]
-            B = self.opt.batchSize
+        if B > self.args.batchSize:
+            choice = torch.randperm(B)[:self.args.batchSize]
+            B = self.args.batchSize
             raysO = raysO[choice]
             raysD = raysD[choice]
             mvp = mvp[choice]
         
-        if expIterRatio <= self.opt.latentIterRatio:
+        if expIterRatio <= self.args.latentIterRatio:
             ambientRatio = 1.0
             shading = "normal"
             asLatent = True
@@ -170,11 +170,11 @@ class Trainer(object):
             bgColor = None
         
         else:
-            ambientRatio = 1.0 if expIterRatio <= self.opt.albedoIterRatio else self.opt.minAmbientRatio + (1.0 - self.opt.minAmbientRatio) * random.random()
-            shading = "albedo" if expIterRatio <= self.opt.albedoIterRatio else "textureless" if random.random() >= (1.0 - self.opt.texturelessRatio) else "lambertian"
+            ambientRatio = 1.0 if expIterRatio <= self.args.albedoIterRatio else self.args.minAmbientRatio + (1.0 - self.args.minAmbientRatio) * random.random()
+            shading = "albedo" if expIterRatio <= self.args.albedoIterRatio else "textureless" if random.random() >= (1.0 - self.args.texturelessRatio) else "lambertian"
             asLatent = False
             binarise = False
-            bgColor = None if self.opt.bgRadius > 0 and random.random() > 0.5 else torch.rand(3).to(self.device)
+            bgColor = None if self.args.bgRadius > 0 and random.random() > 0.5 else torch.rand(3).to(self.device)
         
         outputs = self.model.render(raysO, raysD)
         predDepth = outputs["depth"].reshape(B, 1, H, W)
@@ -198,33 +198,33 @@ class Trainer(object):
         textZ = torch.cat(textZ, dim = 0)
         loss = loss + self.guidance.trainStep(
             textZ, predRGB, asLatent = asLatent,
-            guidanceScale = self.opt.guidanceScale,
-            gradScale = self.opt.lambdaGuidance
+            guidanceScale = self.args.guidanceScale,
+            gradScale = self.args.lambdaGuidance
         )
         
-        loss = loss + self.opt.lambdaOpacity * (outputs["weightsSum"] ** 2).mean() if self.opt.lambdaOpacity > 0 else loss
+        loss = loss + self.args.lambdaOpacity * (outputs["weightsSum"] ** 2).mean() if self.args.lambdaOpacity > 0 else loss
         
-        if self.opt.lambdaEntropy > 0:
+        if self.args.lambdaEntropy > 0:
             alphas = outputs["weights"].clamp(1e-5, 1- 1e-5)
             lossEntropy = (-alphas * torch.log2(alphas) - (1 - alphas) * torch.log2(1 - alphas)).mean()
-            lambdaEntropy = self.opt.lambdaEntropy * min(1, 2* self.globalStep / self.opt.iters)
+            lambdaEntropy = self.args.lambdaEntropy * min(1, 2* self.globalStep / self.args.iters)
             loss = loss + lambdaEntropy * lossEntropy
         
-        if self.opt.lambda2dNormalSmooth > 0 and "normalImage" in outputs:
+        if self.args.lambda2dNormalSmooth > 0 and "normalImage" in outputs:
             lossSmooth = (predNormal[:, 1:, :, :] - predNormal[:, :-1, :, :]).square().mean() + \
                 (predNormal[:, :, 1:, :] - predNormal[:, :, :-1, :]).square().mean()
-            loss = loss + self.opt.lambda2dNormalSmooth * lossSmooth
+            loss = loss + self.args.lambda2dNormalSmooth * lossSmooth
         
-        loss = loss + self.opt.lambdaOrient * outputs["lossOrient"] if self.opt.lambdaOrient > 0 and "lossOrient" in outputs else loss
+        loss = loss + self.args.lambdaOrient * outputs["lossOrient"] if self.args.lambdaOrient > 0 and "lossOrient" in outputs else loss
         
-        loss = loss + self.opt.lambda3dNormalSmooth + outputs["lossNormalPerturb"] if self.opt.lambda3dNormalSmooth > 0 and "lossNormalPerturb" in outputs else loss
+        loss = loss + self.args.lambda3dNormalSmooth + outputs["lossNormalPerturb"] if self.args.lambda3dNormalSmooth > 0 and "lossNormalPerturb" in outputs else loss
                 
         return predRGB, predDepth, loss
     
     def post_train_step(self):
         self.scaler.unscale_(self.optimiser)
-        if self.opt.gradClip >= 0:
-            torch.nn.utils.clip_grad_value_(self.model.parameters(), self.opt.gradClip)
+        if self.args.gradClip >= 0:
+            torch.nn.utils.clip_grad_value_(self.model.parameters(), self.args.gradClip)
     
     def eval_step(self, data):
         raysO = data["raysO"]
@@ -279,8 +279,8 @@ class Trainer(object):
         
         self.log(f"--> Saving mesh to {path}")
         self.model.export_mesh(
-            path, resolution = self.opt.mcubesResolution,
-            decimate_target = self.opt.decimateTarget
+            path, resolution = self.args.mcubesResolution,
+            decimate_target = self.args.decimateTarget
         )
         self.log(f"--> Finished saving mesh.")
     
@@ -298,7 +298,7 @@ class Trainer(object):
         self.localStep = 0
 
         for data in loader:
-            if self.globalStep % self.opt.updateExtraInterval == 0:
+            if self.globalStep % self.args.updateExtraInterval == 0:
                 with torch.cuda.amp.autocast(enabled = self.fp16):
                     self.model.updateExtraState()
             
@@ -310,13 +310,13 @@ class Trainer(object):
             with torch.cuda.amp.autocast(enabled = self.fp16):
                 predRGBs, predDepth, loss = self.train_step(data)
             
-            if self.opt.gradClipRGB >= 0:
+            if self.args.gradClipRGB >= 0:
                 def _hook(grad):
                     if self.fp16:
                         gradScale = self.scaler._get_scale_async()
-                        return grad.clamp(gradScale * -self.opt.gradClipRGB, gradScale * self.opt.gradClipRGB)
+                        return grad.clamp(gradScale * -self.args.gradClipRGB, gradScale * self.args.gradClipRGB)
                     else:
-                        return grad.clamp(-self.opt.gradClipRGB, self.opt.gradClipRGB)
+                        return grad.clamp(-self.args.gradClipRGB, self.args.gradClipRGB)
                 predRGBs.register_hook(_hook)
             
             self.scaler.scale(loss).backward()
@@ -487,11 +487,11 @@ class Trainer(object):
             self.epoch = epoch
             self.trainOneEpoch(trainLoader, maxEpochs)
             
-            if self.epoch % self.opt.evalInterval == 0:
+            if self.epoch % self.args.evalInterval == 0:
                 self.evaluateOneEpoch(validLoader)
             
-            if self.epoch % self.opt.testInterval == 0 or self.epoch == maxEpochs:
-                self.test(testLoader, writeVideo = self.opt.writeVideo)
+            if self.epoch % self.args.testInterval == 0 or self.epoch == maxEpochs:
+                self.test(testLoader, writeVideo = self.args.writeVideo)
         
         endT = time.time()
         
