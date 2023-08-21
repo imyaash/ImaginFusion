@@ -96,7 +96,7 @@ class Pipeline:
             emaDecay = self.args.emaDecay,
             fp16 = self.args.fp16,
             lrScheduler = self.scheduler,
-            schedulerUpdateEveryStep = self.schedulerUpdateEveryStep
+            schedulerUpdateEveryStep = self.args.schedulerUpdateEveryStep
         )
         trainer.default_view_data = trainLoader._data.getDefaultViewData()
         maxEpochs = np.ceil(self.args.iters / len(trainLoader)).astype(np.int32)
