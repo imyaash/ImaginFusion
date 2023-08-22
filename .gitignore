@@ -42,9 +42,8 @@ sdm/pretrained/stabilityai/stable-diffusion-2-1/unet/diffusion_pytorch_model.bin
 sdm/pretrained/stabilityai/stable-diffusion-2-1/vae/config.json
 sdm/pretrained/stabilityai/stable-diffusion-2-1/vae/diffusion_pytorch_model.bin
 outputs/
-NeRF/__pycache__
-sdm/__pycache__
-freqencoder/__pycache__
-gridencoder/__pycache__
-raymarching/__pycache__
-utils/__pycache__
+NeRF/__pycache__/
+sdm/__pycache__/
+freqencoder/__pycache__/
+raymarching/__pycache__/
+utils/__pycache__/
