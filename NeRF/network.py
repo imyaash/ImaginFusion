@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.activation import trunc_exp, biased_softplus
+from utils.activator import truncExp, softplusBiased
 from .renderer import NeRFRenderer
 
 import numpy as np
@@ -65,7 +65,7 @@ class NeRFNetwork(NeRFRenderer):
         # use torch MLP, as tcnn MLP doesn't impl second-order derivative
         self.sigma_net = MLP(self.in_dim, 4, hidden_dim, num_layers, bias=True)
 
-        self.density_activation = trunc_exp if self.opt.densityActivation == 'exp' else biased_softplus
+        self.density_activation = truncExp if self.opt.densityActivation == 'exp' else softplusBiased
 
         # background network
         if self.opt.bgRadius > 0:
