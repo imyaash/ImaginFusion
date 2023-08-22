@@ -3,12 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils.activator import truncExp, softplusBiased
-from .renderer import NeRFRenderer
+from NeRF.renderer import NeRFRenderer
 
 import numpy as np
 from utils.encoder import Encoder
 
-from .utils import safeNormalise
+from utils.functions import safeNormalise
 
 import tinycudann as tcnn
 

@@ -3,9 +3,10 @@ from NeRF.args import Args
 import torch
 from NeRF.provider import NeRFDataset
 from NeRF.network import NeRFNetwork
-from NeRF.utils import seeder, NeRFTrainer
-from utils.optimizer import Adan
+from NeRF.trainer import NeRFTrainer
+from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
+from utils.functions import seeder
 
 args = Args(
     posPrompt = "ultra-realistic, delicious hamburger",

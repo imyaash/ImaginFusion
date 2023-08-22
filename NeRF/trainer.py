@@ -3,7 +3,6 @@ import time
 import glob
 import tqdm
 import torch
-import psutil
 import random
 import imageio
 import cv2 as cv
@@ -11,87 +10,8 @@ import numpy as np
 import tensorboardX
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-from packaging import version as pver
 from torch_ema import ExponentialMovingAverage
-
-def customMeshGrid(*args):
-    if pver.parse(torch.__version__) < pver.parse("1.10"):
-        return torch.meshgrid(*args)
-    else:
-        return torch.meshgrid(*args, indexing = "ij")
-
-def safeNormalise(x, eps = 1e-20):
-    y = x / torch.sqrt(torch.clamp(torch.sum(x * x, -1, keepdim = True), min = eps))
-    return y
-
-@torch.cuda.amp.autocast(enabled = False)
-def getRays(poses, intrinsics, H, W, N = -1, errorMap = None):
-    device = poses.device
-    B = poses.shape[0]
-    fx, fy, cx, cy = intrinsics
-    i, j = customMeshGrid(torch.linspace(0, W - 1, W, device = device), torch.linspace(0, H - 1, H, device = device))
-    i = i.t().reshape([1, H * W]).expand([B, H * W]) + 0.5
-    j = j.t().reshape([1, H * W]).expand([B, H * W]) + 0.5
-    results = {}
-    if N > 0:
-        N = min(N, H * W)
-        if errorMap is None:
-            inds = torch.randint(0, H * W, size = [N], device = device)
-            inds = inds.expand([B, N])
-        else:
-            indsCoarse = torch.multinomial(errorMap.to(device), N, replacement = False)
-            indsX, indsY = indsCoarse // 128, indsCoarse % 128
-            sx, sy = H / 128, W / 128
-            indsX = (indsX * sx + torch.rand(B, N, device=device) * sx).long().clamp(max = H - 1)
-            indsY = (indsY * sy + torch.rand(B, N, device=device) * sy).long().clamp(max = W - 1)
-            inds = indsX * W + indsY
-            results['inds_coarse'] = indsCoarse
-        i = torch.gather(i, -1, inds)
-        j = torch.gather(j, -1, inds)
-        results['inds'] = inds
-    else:
-        inds = torch.arange(H * W, device = device).expand([B, H * W])
-    zs = - torch.ones_like(i)
-    xs = - (i - cx) / fx * zs
-    ys = (j - cy) / fy * zs
-    directions = torch.stack((xs, ys, zs), dim = -1)
-    raysD = directions @ poses[:, :3, :3].transpose(-1, -2)
-    raysO = poses[..., :3, 3]
-    raysO = raysO[..., None, :].expand_as(raysD)
-    results['rays_o'] = raysO
-    results['rays_d'] = raysD
-    return results
-
-def seeder(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-
-@torch.jit.script
-def linear2srgb(x):
-    srgb = torch.where(x < 0.0031308, 12.92 * x, 1.055 * x ** 0.41666 - 0.055)
-    return srgb
-
-@torch.jit.script
-def srgb2linear(x):
-    linear = torch.where(x < 0.04045, x / 12.92, ((x + 0.055) / 1.055) ** 2.4)
-    return linear
-
-def getCPUMem():
-    return psutil.Process(os.getpid()).memory_info().rss / 1024 ** 3
-
-def getGPUMem():
-    num = torch.cuda.device_count()
-    mem, mems = 0, []
-    for i in range(num):
-        memFree, memTotal = torch.cuda.mem_get_info(i)
-        mems.append(int(((memTotal - memFree) / 1024 ** 3) * 1000) / 1000)
-        mem += mems[-1]
-    return mem, mems
+from utils.functions import getCPUMem, getGPUMem
 
 class NeRFTrainer(object):
     def __init__(

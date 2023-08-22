@@ -12,84 +12,8 @@ import nvdiffrast.torch as dr
 
 import mcubes
 import raymarching
-from utils.meshutils import decimate_mesh, clean_mesh
-from .utils import customMeshGrid, safeNormalise
-
-
-def sample_pdf(bins, weights, n_samples, det=False):
-    # This implementation is from NeRF
-    # bins: [B, T], old_z_vals
-    # weights: [B, T - 1], bin weights.
-    # return: [B, n_samples], new_z_vals
-
-    # Get pdf
-    weights = weights + 1e-5  # prevent nans
-    pdf = weights / torch.sum(weights, -1, keepdim=True)
-    cdf = torch.cumsum(pdf, -1)
-    cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], -1)
-    # Take uniform samples
-    if det:
-        u = torch.linspace(0. + 0.5 / n_samples, 1. - 0.5 / n_samples, steps=n_samples).to(weights.device)
-        u = u.expand(list(cdf.shape[:-1]) + [n_samples])
-    else:
-        u = torch.rand(list(cdf.shape[:-1]) + [n_samples]).to(weights.device)
-
-    # Invert CDF
-    u = u.contiguous()
-    inds = torch.searchsorted(cdf, u, right=True)
-    below = torch.max(torch.zeros_like(inds - 1), inds - 1)
-    above = torch.min((cdf.shape[-1] - 1) * torch.ones_like(inds), inds)
-    inds_g = torch.stack([below, above], -1)  # (B, n_samples, 2)
-
-    matched_shape = [inds_g.shape[0], inds_g.shape[1], cdf.shape[-1]]
-    cdf_g = torch.gather(cdf.unsqueeze(1).expand(matched_shape), 2, inds_g)
-    bins_g = torch.gather(bins.unsqueeze(1).expand(matched_shape), 2, inds_g)
-
-    denom = (cdf_g[..., 1] - cdf_g[..., 0])
-    denom = torch.where(denom < 1e-5, torch.ones_like(denom), denom)
-    t = (u - cdf_g[..., 0]) / denom
-    samples = bins_g[..., 0] + t * (bins_g[..., 1] - bins_g[..., 0])
-
-    return samples
-
-@torch.cuda.amp.autocast(enabled=False)
-def near_far_from_bound(rays_o, rays_d, bound, type='cube', min_near=0.05):
-    # rays: [B, N, 3], [B, N, 3]
-    # bound: int, radius for ball or half-edge-length for cube
-    # return near [B, N, 1], far [B, N, 1]
-
-    radius = rays_o.norm(dim=-1, keepdim=True)
-
-    if type == 'sphere':
-        near = radius - bound # [B, N, 1]
-        far = radius + bound
-
-    elif type == 'cube':
-        tmin = (-bound - rays_o) / (rays_d + 1e-15) # [B, N, 3]
-        tmax = (bound - rays_o) / (rays_d + 1e-15)
-        near = torch.where(tmin < tmax, tmin, tmax).max(dim=-1, keepdim=True)[0]
-        far = torch.where(tmin > tmax, tmin, tmax).min(dim=-1, keepdim=True)[0]
-        # if far < near, means no intersection, set both near and far to inf (1e9 here)
-        mask = far < near
-        near[mask] = 1e9
-        far[mask] = 1e9
-        # restrict near to a minimal value
-        near = torch.clamp(near, min=min_near)
-
-    return near, far
-
-
-def plot_pointcloud(pc, color=None):
-    # pc: [N, 3]
-    # color: [N, 3/4]
-    print('[visualize points]', pc.shape, pc.dtype, pc.min(0), pc.max(0))
-    pc = trimesh.PointCloud(pc, color)
-    # axis
-    axes = trimesh.creation.axis(axis_length=4)
-    # sphere
-    sphere = trimesh.creation.icosphere(radius=1)
-    trimesh.Scene([pc, axes, sphere]).show()
-
+from utils.functions import customMeshGrid, near_far_from_bound, safeNormalise, sample_pdf, normal_consistency, laplacian_smooth_loss
+from utils.mesh import meshCleaner, meshDecimator
 
 class DMTet():
     def __init__(self, device):
@@ -172,86 +96,6 @@ class DMTet():
         ), dim=0)
 
         return verts, faces
-
-def compute_edge_to_face_mapping(attr_idx):
-    with torch.no_grad():
-        # Get unique edges
-        # Create all edges, packed by triangle
-        all_edges = torch.cat((
-            torch.stack((attr_idx[:, 0], attr_idx[:, 1]), dim=-1),
-            torch.stack((attr_idx[:, 1], attr_idx[:, 2]), dim=-1),
-            torch.stack((attr_idx[:, 2], attr_idx[:, 0]), dim=-1),
-        ), dim=-1).view(-1, 2)
-
-        # Swap edge order so min index is always first
-        order = (all_edges[:, 0] > all_edges[:, 1]).long().unsqueeze(dim=1)
-        sorted_edges = torch.cat((
-            torch.gather(all_edges, 1, order),
-            torch.gather(all_edges, 1, 1 - order)
-        ), dim=-1)
-
-        # Elliminate duplicates and return inverse mapping
-        unique_edges, idx_map = torch.unique(sorted_edges, dim=0, return_inverse=True)
-
-        tris = torch.arange(attr_idx.shape[0]).repeat_interleave(3).cuda()
-
-        tris_per_edge = torch.zeros((unique_edges.shape[0], 2), dtype=torch.int64).cuda()
-
-        # Compute edge to face table
-        mask0 = order[:,0] == 0
-        mask1 = order[:,0] == 1
-        tris_per_edge[idx_map[mask0], 0] = tris[mask0]
-        tris_per_edge[idx_map[mask1], 1] = tris[mask1]
-
-        return tris_per_edge
-
-@torch.cuda.amp.autocast(enabled=False)
-def normal_consistency(face_normals, t_pos_idx):
-
-    tris_per_edge = compute_edge_to_face_mapping(t_pos_idx)
-
-    # Fetch normals for both faces sharind an edge
-    n0 = face_normals[tris_per_edge[:, 0], :]
-    n1 = face_normals[tris_per_edge[:, 1], :]
-
-    # Compute error metric based on normal difference
-    term = torch.clamp(torch.sum(n0 * n1, -1, keepdim=True), min=-1.0, max=1.0)
-    term = (1.0 - term)
-
-    return torch.mean(torch.abs(term))
-
-
-def laplacian_uniform(verts, faces):
-
-    V = verts.shape[0]
-    F = faces.shape[0]
-
-    # Neighbor indices
-    ii = faces[:, [1, 2, 0]].flatten()
-    jj = faces[:, [2, 0, 1]].flatten()
-    adj = torch.stack([torch.cat([ii, jj]), torch.cat([jj, ii])], dim=0).unique(dim=1)
-    adj_values = torch.ones(adj.shape[1], device=verts.device, dtype=torch.float)
-
-    # Diagonal indices
-    diag_idx = adj[0]
-
-    # Build the sparse matrix
-    idx = torch.cat((adj, torch.stack((diag_idx, diag_idx), dim=0)), dim=1)
-    values = torch.cat((-adj_values, adj_values))
-
-    # The coalesce operation sums the duplicate indices, resulting in the
-    # correct diagonal
-    return torch.sparse_coo_tensor(idx, values, (V,V)).coalesce()
-
-
-@torch.cuda.amp.autocast(enabled=False)
-def laplacian_smooth_loss(verts, faces):
-    with torch.no_grad():
-        L = laplacian_uniform(verts, faces.long())
-    loss = L.mm(verts)
-    loss = loss.norm(dim=1)
-    loss = loss.mean()
-    return loss
 
 
 class NeRFRenderer(nn.Module):
@@ -413,11 +257,11 @@ class NeRFRenderer(nn.Module):
         # clean
         vertices = vertices.astype(np.float32)
         triangles = triangles.astype(np.int32)
-        vertices, triangles = clean_mesh(vertices, triangles, remesh=True, remesh_size=0.01)
+        vertices, triangles = meshCleaner(vertices, triangles, remesh=True, remeshSize=0.01)
         
         # decimation
         if decimate_target > 0 and triangles.shape[0] > decimate_target:
-            vertices, triangles = decimate_mesh(vertices, triangles, decimate_target)
+            vertices, triangles = meshDecimator(vertices, triangles, decimate_target)
 
         v = torch.from_numpy(vertices).contiguous().float().to(self.aabb_train.device)
         f = torch.from_numpy(triangles).contiguous().int().to(self.aabb_train.device)
