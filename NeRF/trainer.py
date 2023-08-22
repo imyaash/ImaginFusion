@@ -290,7 +290,7 @@ class NeRFTrainer(object):
         os.makedirs(path, exist_ok = True)
         
         self.log(f"--> Saving mesh to {path}")
-        self.model.export_mesh(
+        self.model.exportMesh(
             path, resolution = self.opt.mcubesResolution,
             decimate_target = self.opt.decimateTarget
         )
