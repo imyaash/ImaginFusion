@@ -1,5 +1,5 @@
 import numpy as np
-from NeRF.args import Args
+from utils.args import Args
 import torch
 from NeRF.data import NeRFDataset
 from NeRF.model import NeRF
