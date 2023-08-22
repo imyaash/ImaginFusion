@@ -9,40 +9,6 @@ import psutil
 from packaging import version as pver
 
 
-DIR_COLORS = np.array([
-    [255, 0, 0, 255], # front
-    [0, 255, 0, 255], # side
-    [0, 0, 255, 255], # back
-    [255, 255, 0, 255], # side
-    [255, 0, 255, 255], # overhead
-    [0, 255, 255, 255], # bottom
-], dtype=np.uint8)
-
-def visualize_poses(poses, dirs, size=0.1):
-    # poses: [B, 4, 4], dirs: [B]
-
-    axes = trimesh.creation.axis(axis_length=4)
-    sphere = trimesh.creation.icosphere(radius=1)
-    objects = [axes, sphere]
-
-    for pose, dir in zip(poses, dirs):
-        # a camera is visualized with 8 line segments.
-        pos = pose[:3, 3]
-        a = pos + size * pose[:3, 0] + size * pose[:3, 1] - size * pose[:3, 2]
-        b = pos - size * pose[:3, 0] + size * pose[:3, 1] - size * pose[:3, 2]
-        c = pos - size * pose[:3, 0] - size * pose[:3, 1] - size * pose[:3, 2]
-        d = pos + size * pose[:3, 0] - size * pose[:3, 1] - size * pose[:3, 2]
-
-        segs = np.array([[pos, a], [pos, b], [pos, c], [pos, d], [a, b], [b, c], [c, d], [d, a]])
-        segs = trimesh.load_path(segs)
-
-        # different color for different dirs
-        segs.colors = DIR_COLORS[[dir]].repeat(len(segs.entities), 0)
-
-        objects.append(segs)
-
-    trimesh.Scene(objects).show()
-
 def get_view_direction(thetas, phis, overhead, front):
     #                   phis: [B,];          thetas: [B,]
     # front = 0             [-front/2, front/2)
@@ -236,17 +202,6 @@ def near_far_from_bound(rays_o, rays_d, bound, type='cube', min_near=0.05):
 
     return near, far
 
-
-def plot_pointcloud(pc, color=None):
-    # pc: [N, 3]
-    # color: [N, 3/4]
-    print('[visualize points]', pc.shape, pc.dtype, pc.min(0), pc.max(0))
-    pc = trimesh.PointCloud(pc, color)
-    # axis
-    axes = trimesh.creation.axis(axis_length=4)
-    # sphere
-    sphere = trimesh.creation.icosphere(radius=1)
-    trimesh.Scene([pc, axes, sphere]).show()
 
 def compute_edge_to_face_mapping(attr_idx):
     with torch.no_grad():

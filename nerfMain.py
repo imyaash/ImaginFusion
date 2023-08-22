@@ -1,8 +1,8 @@
 import numpy as np
 from NeRF.args import Args
 import torch
-from NeRF.provider import NeRFDataset
-from NeRF.network import NeRFNetwork
+from NeRF.data import NeRFDataset
+from NeRF.model import NeRF
 from NeRF.trainer import NeRFTrainer
 from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
@@ -53,7 +53,7 @@ if args.seed is not None:
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = NeRFNetwork(args).to(device)
+model = NeRF(args).to(device)
 
 print(model)
 
@@ -64,13 +64,13 @@ trainLoader = NeRFDataset(
 
 if args.optim == "adan":
     optimiser = lambda model: Adan(
-        model.get_params(5 * args.lr),
+        model.getParams(5 * args.lr),
         eps = 1e-8, weight_decay = 2e-5,
         max_grad_norm = 5.0, foreach = False
     )
 else:
     optimiser = lambda model: torch.optim.Adam(
-        model.get_params(args.lr),
+        model.getParams(args.lr),
         betas = (0.9, 0.99), eps = 1e-15
     )
 scheduler = lambda optimiser: torch.optim.lr_scheduler.LambdaLR(optimiser, lambda iter: 1)
