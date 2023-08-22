@@ -4,7 +4,7 @@ import torch.nn as nn
 import tinycudann as tcnn
 import torch.nn.functional as F
 from utils.encoder import Encoder
-from NeRF.renderer import NeRFRenderer
+from NeRF.renderer import Renderer
 from utils.functions import safeNormalise
 from utils.activator import truncExp, softplusBiased
 
@@ -30,7 +30,7 @@ class NN(nn.Module):
                 x = F.relu(x, inplace=True)
         return x
 
-class NeRF(NeRFRenderer):
+class NeRF(Renderer):
     def __init__(
             self, args,
             nLayers = 3,
@@ -121,8 +121,7 @@ class NeRF(NeRFRenderer):
     def background(self, d):
         h = self.encoderBG(d)
         h = self.bgNet(h)
-        rgbs = torch.sigmoid(h)
-        return rgbs
+        return torch.sigmoid(h)
     
     def getParams(self, lr):
         params = [
