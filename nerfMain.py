@@ -4,12 +4,12 @@ import torch
 from NeRF.provider import NeRFDataset
 from NeRF.network import NeRFNetwork
 from NeRF.utils import seeder, NeRFTrainer
-from optimizer import Adan
-from sd import StableDiffusionModel
+from utils.optimizer import Adan
+from sdm.model import StableDiffusionModel
 
 args = Args(
     posPrompt = "ultra-realistic, delicious hamburger",
-    workspace = "testHamburger5",
+    workspace = "testHamburger",
     fp16 = True,
     seed = 0,
     iters = 5000,
@@ -85,7 +85,7 @@ trainer = NeRFTrainer(
     model = model,
     guidance = guidance,
     device = device,
-    workspace = args.workspace,
+    workspace = f"outputs/{args.workspace}",
     optimiser = optimiser,
     emaDecay = args.emaDecay,
     fp16 = args.fp16,

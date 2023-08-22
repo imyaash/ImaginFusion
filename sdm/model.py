@@ -39,7 +39,7 @@ class StableDiffusionModel(nn.Module):
             else:
                 raise ValueError(f"Unsupported stable-diffusion version {self.version}")
             
-        modelPath = f"pretrainedSD/{modelKey}"
+        modelPath = f"sdm/pretrained/{modelKey}"
         if os.path.exists(modelPath):
             print(f"Loading pretrained stable-diffusion model from {modelPath}")
         else:

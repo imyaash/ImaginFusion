@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from activation import trunc_exp, biased_softplus
+from utils.activation import trunc_exp, biased_softplus
 from .renderer import NeRFRenderer
 
 import numpy as np
-from encoding import get_encoder
+from utils.encoding import get_encoder
 
 from .utils import safeNormalise
 
