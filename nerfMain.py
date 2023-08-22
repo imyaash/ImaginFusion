@@ -9,7 +9,7 @@ from sdm.model import StableDiffusionModel
 
 args = Args(
     posPrompt = "ultra-realistic, delicious hamburger",
-    workspace = "testHamburger",
+    workspace = "testHamburger(testChanges)",
     fp16 = True,
     seed = 0,
     iters = 5000,

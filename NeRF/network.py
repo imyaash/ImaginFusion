@@ -6,7 +6,7 @@ from utils.activator import truncExp, softplusBiased
 from .renderer import NeRFRenderer
 
 import numpy as np
-from utils.encoding import get_encoder
+from utils.encoder import Encoder
 
 from .utils import safeNormalise
 
@@ -73,7 +73,7 @@ class NeRFNetwork(NeRFRenderer):
             self.hidden_dim_bg = hidden_dim_bg
             
             # use a very simple network to avoid it learning the prompt...
-            self.encoder_bg, self.in_dim_bg = get_encoder('frequency', input_dim=3, multires=6)
+            self.encoder_bg, self.in_dim_bg = Encoder(input_dim=3, multires=6)
             self.bg_net = MLP(self.in_dim_bg, 3, hidden_dim_bg, num_layers_bg, bias=True)
             
         else:
