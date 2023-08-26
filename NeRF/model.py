@@ -1,144 +1,178 @@
 import torch
-import numpy as np
 import torch.nn as nn
-import tinycudann as tcnn
 import torch.nn.functional as F
-from utils.encoder import Encoder
-from NeRF.renderer import Renderer
-from utils.functions import safeNormalise
-from utils.activator import truncExp, softplusBiased
 
-class NN(nn.Module):
-    def __init__(self, inDim, outDim, hiddenDim, nLayers, bias=True):
+from utils.activator import truncExp, softplus
+from .renderer import NeRFRenderer
+
+import numpy as np
+from utils.encoder import encoder
+
+from utils.functions import safeNormalise
+
+import tinycudann as tcnn
+
+class MLP(nn.Module):
+    def __init__(self, dim_in, dim_out, dim_hidden, num_layers, bias=True):
         super().__init__()
-        self.inDim = inDim
-        self.outDim = outDim
-        self.hiddenDim = hiddenDim
-        self.nLayers = nLayers
-        self.network = nn.ModuleList([
-            nn.Linear(
-            self.inDim if layer == 0 else self.hiddenDim,
-            self.outDim if layer == nLayers - 1 else self.hiddenDim,
-            bias = bias
-            ) for layer in range(nLayers)
-        ])
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+        self.dim_hidden = dim_hidden
+        self.num_layers = num_layers
+
+        net = []
+        for l in range(num_layers):
+            net.append(nn.Linear(self.dim_in if l == 0 else self.dim_hidden, self.dim_out if l == num_layers - 1 else self.dim_hidden, bias=bias))
+
+        self.net = nn.ModuleList(net)
     
     def forward(self, x):
-        for layer in range(self.nLayers):
-            x = self.network[layer](x)
-            if layer != self.nLayers - 1:
+        for l in range(self.num_layers):
+            x = self.net[l](x)
+            if l != self.num_layers - 1:
                 x = F.relu(x, inplace=True)
         return x
 
-class NeRF(Renderer):
-    def __init__(
-            self, args,
-            nLayers = 3,
-            hiddenDim = 64,
-            nLayersBG = 2,
-            hiddenDimBG = 32
-    ):
-        super().__init__(args)
-        self.nLayers = nLayers
-        self.hiddenDim = hiddenDim
+
+class NeRFNetwork(NeRFRenderer):
+    def __init__(self, 
+                 opt,
+                 num_layers=3,
+                 hidden_dim=64,
+                 num_layers_bg=2,
+                 hidden_dim_bg=32,
+                 ):
+        
+        super().__init__(opt)
+
+        self.num_layers = num_layers
+        self.hidden_dim = hidden_dim
+
         self.encoder = tcnn.Encoding(
-            n_input_dims = 3,
-            encoding_config = {
+            n_input_dims=3,
+            encoding_config={
                 "otype": "HashGrid",
                 "n_levels": 16,
                 "n_features_per_level": 2,
                 "log2_hashmap_size": 19,
                 "base_resolution": 16,
                 "interpolation": "Smoothstep",
-                "per_level_scale": np.exp2(
-            np.log2(2048 * self.bound / 16) / (16 - 1)
-                )
-            }, dtype = torch.float32
+                "per_level_scale": np.exp2(np.log2(2048 * self.bound / 16) / (16 - 1)),
+            },
+            dtype=torch.float32, # ENHANCE: default float16 seems unstable...
         )
-        self.inDim = self.encoder.n_output_dims
-        self.sigmaNet = NN(self.inDim, 4, hiddenDim, nLayers, True)
-        self.densityActivation = truncExp if self.args.densityActivation == "exp" else softplusBiased
-        if self.args.bgRadius > 0:
-            self.nLayersBG = nLayersBG
-            self.hiddenDimBG = hiddenDimBG
-            self.encoderBG, self.inDimBG = Encoder(3, 6)
-            self.bgNet = NN(self.inDimBG, 3, hiddenDimBG, nLayersBG, True)
+        self.in_dim = self.encoder.n_output_dims
+        # use torch MLP, as tcnn MLP doesn't impl second-order derivative
+        self.sigma_net = MLP(self.in_dim, 4, hidden_dim, num_layers, bias=True)
+
+        self.density_activation = truncExp if self.opt.densityActivation == 'exp' else softplus
+
+        # background network
+        if self.opt.bgRadius > 0:
+            self.num_layers_bg = num_layers_bg   
+            self.hidden_dim_bg = hidden_dim_bg
+            
+            # use a very simple network to avoid it learning the prompt...
+            self.encoder_bg, self.in_dim_bg = encoder(inDim = 3, multiRes = 6)
+            self.bg_net = MLP(self.in_dim_bg, 3, hidden_dim_bg, num_layers_bg, bias=True)
+            
         else:
-            self.bgNet = None
-    
-    def commonForward(self, x):
-        enc = self.encoder(
-            (x + self.bound) / (2 * self.bound)
-        ).float()
-        h = self.sigmaNet(enc)
-        sigma = self.densityActivation(h[..., 0] + self.densityBlob(x))
+            self.bg_net = None
+
+    def common_forward(self, x):
+
+        # sigma
+        enc = self.encoder((x + self.bound) / (2 * self.bound)).float()
+        h = self.sigma_net(enc)
+
+        sigma = self.density_activation(h[..., 0] + self.density_blob(x))
         albedo = torch.sigmoid(h[..., 1:])
+
         return sigma, albedo
     
     def normal(self, x):
+    
         with torch.enable_grad():
-            with torch.cuda.amp.autocast(enabled = False):
+            with torch.cuda.amp.autocast(enabled=False):
                 x.requires_grad_(True)
-                sigma, albedo = self.commonForward(x)
-                normal = -torch.autograd.grad(
-                    torch.sum(sigma), x, create_graph = True
-                )[0]
+                sigma, albedo = self.common_forward(x)
+                # query gradient
+                normal = - torch.autograd.grad(torch.sum(sigma), x, create_graph=True)[0] # [N, 3]
+        
+        # normal = self.finite_difference_normal(x)
         normal = safeNormalise(normal)
         normal = torch.nan_to_num(normal)
+
         return normal
     
-    def forward(self, x, d, l = None, ratio = 1, shading = "albedo"):
-        if shading == "albedo":
-            sigma, albedo = self.commonForward(x)
+    def forward(self, x, d, l=None, ratio=1, shading='albedo'):
+        # x: [N, 3], in [-bound, bound]
+        # d: [N, 3], view direction, nomalized in [-1, 1]
+        # l: [3], plane light direction, nomalized in [-1, 1]
+        # ratio: scalar, ambient ratio, 1 == no shading (albedo only), 0 == only shading (textureless)
+
+
+        if shading == 'albedo':
+            sigma, albedo = self.common_forward(x)
             normal = None
             color = albedo
-        else:
+        
+        else: # lambertian shading
             with torch.enable_grad():
-                with torch.cuda.amp.autocast(enabled = False):
+                with torch.cuda.amp.autocast(enabled=False):
                     x.requires_grad_(True)
-                    sigma, albedo = self.commonForward(x)
-                    normal = -torch.autograd.grad(
-                        torch.sum(sigma), x, create_graph = True
-                    )[0]
+                    sigma, albedo = self.common_forward(x)
+                    normal = - torch.autograd.grad(torch.sum(sigma), x, create_graph=True)[0] # [N, 3]
             normal = safeNormalise(normal)
             normal = torch.nan_to_num(normal)
-            lambertian = ratio + (1 - ratio) * (normal * l).sum(-1).clamp(min = 0)
-            if shading == "textureless":
+
+            lambertian = ratio + (1 - ratio) * (normal * l).sum(-1).clamp(min=0) # [N,]
+
+            if shading == 'textureless':
                 color = lambertian.unsqueeze(-1).repeat(1, 3)
-            elif shading == "normal":
+            elif shading == 'normal':
                 color = (normal + 1) / 2
-            else:
+            else: # 'lambertian'
                 color = albedo * lambertian.unsqueeze(-1)
+            
         return sigma, color, normal
-    
+
+      
     def density(self, x):
-        sigma, albedo = self.commonForward(x)
+        # x: [N, 3], in [-bound, bound]
+        
+        sigma, albedo = self.common_forward(x)
+        
         return {
-            "sigma": sigma,
-            "albedo": albedo
+            'sigma': sigma,
+            'albedo': albedo,
         }
-    
+
+
     def background(self, d):
-        h = self.encoderBG(d)
-        h = self.bgNet(h)
-        return torch.sigmoid(h)
-    
-    def getParams(self, lr):
+
+        h = self.encoder_bg(d) # [N, C]
+        
+        h = self.bg_net(h)
+
+        # sigmoid activation for rgb
+        rgbs = torch.sigmoid(h)
+
+        return rgbs
+
+    # optimizer utils
+    def get_params(self, lr):
+
         params = [
-            {
-                "params": self.encoder.parameters(),
-                "lr": lr * 10
-            },
-            {
-                "params": self.sigmaNet.parameters(),
-                "lr": lr
-            }
-        ]
-        if self.args.bgRadius > 0:
-            params.append(
-                {
-                    "params": self.bgNet.parameters(),
-                    "lr": lr
-                }
-            )
+            {'params': self.encoder.parameters(), 'lr': lr * 10},
+            {'params': self.sigma_net.parameters(), 'lr': lr},
+        ]        
+
+        if self.opt.bgRadius > 0:
+            params.append({'params': self.bg_net.parameters(), 'lr': lr})
+        
+        if self.opt.dmtet and not self.opt.lock_geo:
+            params.append({'params': self.sdf, 'lr': lr})
+            params.append({'params': self.deform, 'lr': lr})
+
         return params

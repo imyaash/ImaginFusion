@@ -1,8 +1,8 @@
 import numpy as np
 from utils.args import Args
 import torch
-from NeRF.data import NeRFDataset
-from NeRF.model import NeRF
+from NeRF.data import Dataset
+from NeRF.model import NeRFNetwork
 from NeRF.trainer import NeRFTrainer
 from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
@@ -10,10 +10,10 @@ from utils.functions import seeder
 
 args = Args(
     posPrompt = "ultra-realistic, delicious hamburger",
-    workspace = "testHamburger(testChanges)",
+    workspace = "testHamburger",
     fp16 = True,
     seed = 0,
-    iters = 5000,
+    iters = 100,
     lr = 7.75e-4, # trying for speeds sake, good result on simple shaped object
     # lr = 1e-4, # for slower but better performance, useless for complex and intricate objects takes too long to learn
     # lr = 1e-3, # is the original
@@ -53,24 +53,25 @@ if args.seed is not None:
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = NeRF(args).to(device)
+model = NeRFNetwork(args).to(device)
 
 print(model)
 
-trainLoader = NeRFDataset(
+trainLoader = Dataset(
     args, device = device, type = "train",
-    H = args.h, W = args.w, size = args.datasetSizeTrain * args.batchSize
-).dataloader()
+    H = args.h, W = args.w,
+    size = args.datasetSizeTrain * args.batchSize
+).dataLoader()
 
 if args.optim == "adan":
     optimiser = lambda model: Adan(
-        model.getParams(5 * args.lr),
+        model.get_params(5 * args.lr),
         eps = 1e-8, weight_decay = 2e-5,
         max_grad_norm = 5.0, foreach = False
     )
 else:
     optimiser = lambda model: torch.optim.Adam(
-        model.getParams(args.lr),
+        model.get_params(args.lr),
         betas = (0.9, 0.99), eps = 1e-15
     )
 scheduler = lambda optimiser: torch.optim.lr_scheduler.LambdaLR(optimiser, lambda iter: 1)
@@ -94,9 +95,13 @@ trainer = NeRFTrainer(
     schedulerUpdateEveryStep = True,
     useTensorboardX = True
 )
-trainer.default_view_data = trainLoader._data.get_default_view_data()
-validLoader = NeRFDataset(args, device = device, type = "val", H = args.H, W = args.W, size = args.datasetSizeValid).dataloader(batch_size = 1)
-testLoader = NeRFDataset(args, device = device, type = "test", H = args.H, W = args.W, size = args.datasetSizeTest).dataloader(batch_size = 1)
+trainer.default_view_data = trainLoader._data.getDefaultViewData()
+validLoader = Dataset(args, device = device, type = "val",
+                      H = args.H, W = args.W,
+                      size = args.datasetSizeValid).dataLoader(batchSize = 1)
+testLoader = Dataset(args, device = device, type = "test",
+                     H = args.H, W = args.W,
+                     size = args.datasetSizeTest).dataLoader(batchSize = 1)
 maxEpoch = np.ceil(args.iters / len(trainLoader)).astype(np.int32)
 trainer.train(
     trainLoader = trainLoader,

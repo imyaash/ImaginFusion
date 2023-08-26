@@ -3,6 +3,7 @@ import time
 import glob
 import tqdm
 import torch
+import psutil
 import random
 import imageio
 import cv2 as cv
@@ -10,6 +11,8 @@ import numpy as np
 import tensorboardX
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
+from packaging import version as pver
 from torch_ema import ExponentialMovingAverage
 from utils.functions import getCPUMem, getGPUMem
 
@@ -290,7 +293,7 @@ class NeRFTrainer(object):
         os.makedirs(path, exist_ok = True)
         
         self.log(f"--> Saving mesh to {path}")
-        self.model.exportMesh(
+        self.model.export_mesh(
             path, resolution = self.opt.mcubesResolution,
             decimate_target = self.opt.decimateTarget
         )

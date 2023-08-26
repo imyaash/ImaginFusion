@@ -1,5 +1,5 @@
 from freqencoder import FreqEncoder
 
-def Encoder(inputDim = 3, multires = 6):
-    encoder = FreqEncoder(input_dim = inputDim, degree = multires)
+def encoder(inDim = 3, multiRes = 6):
+    encoder = FreqEncoder(input_dim = inDim, degree = multiRes)
     return encoder, encoder.output_dim
