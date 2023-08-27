@@ -3,13 +3,13 @@ from utils.args import Args
 import torch
 from NeRF.data import Dataset
 from NeRF.model import NeRF
-from NeRF.trainer import NeRFTrainer
+from NeRF.trainer import Trainer
 from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
 from utils.functions import seeder
 
 args = Args(
-    posPrompt = "ultra-realistic, delicious hamburger",
+    posPrompt = "delicious hamburger",
     workspace = "testHamburger",
     fp16 = True,
     seed = 0,
@@ -82,9 +82,9 @@ guidance = StableDiffusionModel(
     hfModelKey = args.hfModelKey, tRange = args.tRange
 )
 
-trainer = NeRFTrainer(
+trainer = Trainer(
     expName = args.expName,
-    opt = args,
+    args = args,
     model = model,
     guidance = guidance,
     device = device,
