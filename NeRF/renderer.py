@@ -197,12 +197,11 @@ class NeRFRenderer(nn.Module):
 
         exporter(v, f)
 
-
     def run(
             self, raysO, raysD, lightD = None,
             ambientRatio = 1.0, shading = 'albedo',
             bgColor = None, perturb = False,
-            tThresh = 1e-4, binarise = False, **kwargs
+            tThresh = 1e-4, binarise = False, **test
     ):
         pfx = raysO.shape[:-1]
         raysO = raysO.contiguous().view(-1, 3)
@@ -289,7 +288,6 @@ class NeRFRenderer(nn.Module):
         results['weights_sum'] = weightsSum
         return results
 
-
     @torch.no_grad()
     def update_extra_state(self, decay=0.95, S=128):
         tempGrid = -torch.ones_like(self.density_grid)
@@ -329,7 +327,7 @@ class NeRFRenderer(nn.Module):
         densityT = min(self.meanDensity, self.densityT)
         self.density_bitfield = raymarching.packbits(self.density_grid, densityT, self.density_bitfield)
 
-    def render(self, rays_o, rays_d, mvp, h, w, staged=False, max_ray_batch=4096, **kwargs):
+    def render(self, rays_o, rays_d, **kwargs):
         # rays_o, rays_d: [B, N, 3]
         # return: pred_rgb: [B, N, 3]
         B, N = rays_o.shape[:2]

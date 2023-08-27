@@ -180,9 +180,17 @@ class NeRFTrainer(object):
             bgColor = None if self.opt.bgRadius > 0 and random.random() > 0.5 else torch.rand(3).to(self.device)
         
         # outputs = self.model.render(raysO, raysD)
+        # outputs = self.model.render(
+        #     raysO, raysD, mvp, H, W,
+        #     staged = False,
+        #     perturb = True,
+        #     bg_color = bgColor,
+        #     ambient_ratio = ambientRatio,
+        #     shading = shading,
+        #     binarize = binarise
+        # )
         outputs = self.model.render(
-            raysO, raysD, mvp, H, W,
-            staged = False,
+            raysO, raysD,
             perturb = True,
             bg_color = bgColor,
             ambient_ratio = ambientRatio,
@@ -251,8 +259,13 @@ class NeRFTrainer(object):
         lightD = data["light_d"] if "light_d" in data else None
 
         # outputs = self.model.render(raysO, raysD)
+        # outputs = self.model.render(
+        #     raysO, raysD, mvp, H, W, staged = True,
+        #     perturb = False, bg_color = None, light_d = lightD,
+        #     ambient_ratio = ambientRatio, shading = shading
+        # )
         outputs = self.model.render(
-            raysO, raysD, mvp, H, W, staged = True,
+            raysO, raysD,
             perturb = False, bg_color = None, light_d = lightD,
             ambient_ratio = ambientRatio, shading = shading
         )
@@ -278,8 +291,13 @@ class NeRFTrainer(object):
         lightD = data["light_d"] if "light_d" in data else None
 
         # outputs = self.model.render(raysO, raysD)
+        # outputs = self.model.render(
+        #     raysO, raysD, mvp, H, W, staged = True,
+        #     perturb = perturb, bg_color = bgColor, light_d = lightD,
+        #     ambient_ratio = ambientRatio, shading = shading
+        # )
         outputs = self.model.render(
-            raysO, raysD, mvp, H, W, staged = True,
+            raysO, raysD,
             perturb = perturb, bg_color = bgColor, light_d = lightD,
             ambient_ratio = ambientRatio, shading = shading
         )
