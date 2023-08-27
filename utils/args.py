@@ -1,8 +1,6 @@
 class Args(object):
     def __init__(
             self,
-            # image = None,
-            # imageConfig = None,
             posPrompt = "",
             negPrompt = "",
             expName = "df",
@@ -11,18 +9,14 @@ class Args(object):
             seed = None,
             sdVersion = "2.1",
             hfModelKey = None,
-            vramLimit = 4.0, # VRAM limit for NeRF
             evalInterval = 1, # Number of training iterations between every evaluation on valid set
             testInterval = 100, # Number of training iterations between every test on test set
-            # knownViewInterval = 4, # Number of iterations between training on default view with RGB loss
-            guidanceScale = 100, # Guidance scale for Zero123
+            guidanceScale = 100, # Guidance scale for stabel-diffusion
             saveMesh = True, # Whether to save the mesh
             mcubesResolution = 256, # Resolution for extracting mesh
             decimateTarget = 5e4, # Target for mesh decimation
-            # tetGridSize = 128, # Size of tet grid
             iters = 10000, # Number of iterations for training
             lr = 1e-3, # Max learning rate
-            # cudaRay = True, # Use CUDARay instead of torch
             maxSteps = 1024, # Maximum number of steps sampled per ray
             updateExtraInterval = 16, # Iteration interval to update extra status
             latentIterRatio = 0.2,
@@ -45,7 +39,6 @@ class Args(object):
             w = 64, # Render width for training NeRF
             h = 64, # Render height for training NeRF
             knownViewScale = 1.5, # multiply --h/w by this for known view rendering
-            knownViewNoiseScale = 2e-3, # random camera noise added to rays_o and rays_d
             batchSize = 1, # Images to be rendered per batch
             bound = 1, # assume the scene is bounded in box(-bound, bound)x
             dtGamma = 0, # dt_gamma (>=0) for adaptive ray marching. set to 0 to disable, >0 to accelerate rendering (but usually with worse quality)
@@ -68,22 +61,12 @@ class Args(object):
             lambdaEntropy = 1e-3, # loss scale for alpha entropy # should try 1e-4 # original 1e-3
             lambdaOpacity = 0, # loss scale for alpha value
             lambdaOrient = 1e-2, # loss scale for orientation
-            lambdaTv = 0, # loss scale for total variation
-            lambdaWd = 0, # loss scale
-            lambdaMeshNormal = 0.5, # loss scale for mesh normal smoothness
-            lambdaMeshLaplacian = 0.5, # loss scale for mesh laplacian
             lambdaGuidance = 1, # loss scale for guidance
-            lambdaRGB = 1000, # loss scale for RGB
-            lambdaMask = 500, # loss scale for mask (alpha)
             lambdaNormal = 0, # loss scale for normal map
-            lambdaDepth = 10, # loss scale for relative depth
             lambda2dNormalSmooth = 0, # loss scale for 2d normal image smoothness
             lambda3dNormalSmooth = 0, # loss scale for 2d normal image smoothness
             H = 800, # Mesh height for validation
             W = 800, # Mesh width for validation
-            # zero123GuidanceConfig = "pretrainedZ123/config/zero123GuidanceConfig.yaml",
-            # zero123GuidanceCkpt = "pretrainedZ123/ckpt/Zero123-300k.ckpt",
-            # zero123GuidanceGradScale = "angle", # ["angle" or "None"]
             datasetSizeTrain = 100, # lenght of train dataset
             datasetSizeValid = 8, # frames to render in the turntable video in validation
             datasetSizeTest = 100, # frames to render in the turntable video in test time
@@ -101,7 +84,6 @@ class Args(object):
         self.seed = seed
         self.sdVersion = sdVersion
         self.hfModelKey = hfModelKey
-        self.vramLimit = vramLimit
         self.evalInterval = evalInterval
         self.testInterval = testInterval
         self.guidanceScale = guidanceScale
@@ -132,7 +114,6 @@ class Args(object):
         self.w = w
         self.h = h
         self.knownViewScale = knownViewScale
-        self.knownViewNoiseScale = knownViewNoiseScale
         self.batchSize = batchSize
         self.bound = bound
         self.dtGamma = dtGamma
@@ -155,15 +136,8 @@ class Args(object):
         self.lambdaEntropy = lambdaEntropy
         self.lambdaOpacity = lambdaOpacity
         self.lambdaOrient = lambdaOrient
-        self.lambdaTv = lambdaTv
-        self.lambdaWd = lambdaWd
-        self.lambdaMeshNormal = lambdaMeshNormal
-        self.lambdaMeshLaplacian = lambdaMeshLaplacian
         self.lambdaGuidance = lambdaGuidance
-        self.lambdaRGB = lambdaRGB
-        self.lambdaMask = lambdaMask
         self.lambdaNormal = lambdaNormal
-        self.lambdaDepth = lambdaDepth
         self.lambda2dNormalSmooth = lambda2dNormalSmooth
         self.lambda3dNormalSmooth = lambda3dNormalSmooth
         self.H = H
@@ -176,11 +150,6 @@ class Args(object):
         self.writeVideo = writeVideo
         self.emaDecay = emaDecay
         self.schedulerUpdateEveryStep = schedulerUpdateEveryStep
-        self.images = []
         self.refRadii = []
         self.refPolars = []
         self.refAzimuths = []
-        self.zero123WS = []
-        self.defaultZero123W = 1
-        self.dmtet = False
-        self.taichi_ray = False
