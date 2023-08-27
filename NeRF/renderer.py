@@ -9,7 +9,7 @@ import torch.nn as nn
 from utils.mesh import meshDecimator, meshCleaner
 from utils.functions import customMeshGrid, safeNormalise
 
-class NeRFRenderer(nn.Module):
+class Renderer(nn.Module):
     def __init__(self, args):
         super().__init__()
 

@@ -2,7 +2,7 @@ import numpy as np
 from utils.args import Args
 import torch
 from NeRF.data import Dataset
-from NeRF.model import NeRFNetwork
+from NeRF.model import NeRF
 from NeRF.trainer import NeRFTrainer
 from utils.optimiser import Adan
 from sdm.model import StableDiffusionModel
@@ -54,7 +54,7 @@ if args.seed is not None:
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = NeRFNetwork(args).to(device)
+model = NeRF(args).to(device)
 
 print(model)
 
