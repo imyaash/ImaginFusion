@@ -179,6 +179,7 @@ class NeRFTrainer(object):
             binarise = False
             bgColor = None if self.opt.bgRadius > 0 and random.random() > 0.5 else torch.rand(3).to(self.device)
         
+        # outputs = self.model.render(raysO, raysD)
         outputs = self.model.render(
             raysO, raysD, mvp, H, W,
             staged = False,
@@ -249,6 +250,7 @@ class NeRFTrainer(object):
         ambientRatio = data["ambient_ratio"] if "ambient_ratio" in data else 1.0
         lightD = data["light_d"] if "light_d" in data else None
 
+        # outputs = self.model.render(raysO, raysD)
         outputs = self.model.render(
             raysO, raysD, mvp, H, W, staged = True,
             perturb = False, bg_color = None, light_d = lightD,
@@ -275,6 +277,7 @@ class NeRFTrainer(object):
         ambientRatio = data["ambient_ratio"] if "ambient_ratio" in data else 1.0
         lightD = data["light_d"] if "light_d" in data else None
 
+        # outputs = self.model.render(raysO, raysD)
         outputs = self.model.render(
             raysO, raysD, mvp, H, W, staged = True,
             perturb = perturb, bg_color = bgColor, light_d = lightD,
@@ -293,6 +296,10 @@ class NeRFTrainer(object):
         os.makedirs(path, exist_ok = True)
         
         self.log(f"--> Saving mesh to {path}")
+        # self.model.exportMesh(
+        #     path, resolution = self.opt.mcubesResolution,
+        #     decimateT = self.opt.decimateTarget
+        # )
         self.model.export_mesh(
             path, resolution = self.opt.mcubesResolution,
             decimate_target = self.opt.decimateTarget
@@ -315,6 +322,7 @@ class NeRFTrainer(object):
         for data in loader:
             if self.globalStep % self.opt.updateExtraInterval == 0:
                 with torch.cuda.amp.autocast(enabled = self.fp16):
+                    # self.model.updateExtraState()
                     self.model.update_extra_state()
             
             self.localStep += 1
