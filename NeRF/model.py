@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils.activator import truncExp, softplus
+# from .renderer import Renderer
 from .renderer import NeRFRenderer
 
 import numpy as np
@@ -85,6 +86,7 @@ class NeRFNetwork(NeRFRenderer):
         enc = self.encoder((x + self.bound) / (2 * self.bound)).float()
         h = self.sigma_net(enc)
 
+        # sigma = self.density_activation(h[..., 0] + self.densityBlob(x))
         sigma = self.density_activation(h[..., 0] + self.density_blob(x))
         albedo = torch.sigmoid(h[..., 1:])
 

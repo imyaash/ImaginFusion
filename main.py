@@ -13,11 +13,12 @@ args = Args(
     workspace = "testHamburger",
     fp16 = True,
     seed = 0,
-    iters = 100,
+    iters = 5000,
     lr = 7.75e-4, # trying for speeds sake, good result on simple shaped object
     # lr = 1e-4, # for slower but better performance, useless for complex and intricate objects takes too long to learn
     # lr = 1e-3, # is the original
     # lr = 5.5e-4, # seems to be a good middle ground
+    # lr = 7.75e-5,
     lambdaEntropy = 1e-4,
     maxSteps = 512,
     h = 64, 
@@ -25,11 +26,11 @@ args = Args(
     writeVideo = True,
     datasetSizeTrain = 20,
     datasetSizeValid = 8,
-    datasetSizeTest = 100,
-    testInterval = 50
+    datasetSizeTest = 100
 )
 
 args.cuda_ray = True
+args.testInterval = max(int((args.iters / args.datasetSizeTrain) / 5), 5)
 
 args.expStartIter = args.expStartIter or 0
 args.expEndIter = args.expEndIter or args.iters
