@@ -13,15 +13,15 @@ from utils.mesh import meshDecimator, meshCleaner
 from utils.functions import customMeshGrid, safeNormalise
 
 class NeRFRenderer(nn.Module):
-    def __init__(self, opt):
+    def __init__(self, args):
         super().__init__()
 
-        self.opt = opt
-        self.bound = opt.bound
-        self.cascade = 1 + math.ceil(math.log2(opt.bound))
+        self.args = args
+        self.bound = args.bound
+        self.cascade = 1 + math.ceil(math.log2(args.bound))
         self.gridSize = 128
-        self.densityT = opt.densityThresh
-        aabb_train = torch.FloatTensor([-opt.bound, -opt.bound, -opt.bound, opt.bound, opt.bound, opt.bound])
+        self.densityT = args.densityThresh
+        aabb_train = torch.FloatTensor([-args.bound, -args.bound, -args.bound, args.bound, args.bound, args.bound])
         aabb_infer = aabb_train.clone()
         self.register_buffer('aabb_train', aabb_train)
         self.register_buffer('aabb_infer', aabb_infer)
@@ -39,12 +39,10 @@ class NeRFRenderer(nn.Module):
         
         d = (x ** 2).sum(-1)
         
-        if self.opt.densityActivation == 'exp':
-            g = self.opt.blobDensity * torch.exp(- d / (2 * self.opt.blobRadius ** 2))
+        if self.args.densityActivation == 'exp':
+            return self.args.blobDensity * torch.exp(- d / (2 * self.args.blobRadius ** 2))
         else:
-            g = self.opt.blobDensity * (1 - torch.sqrt(d) / self.opt.blobRadius)
-
-        return g
+            return self.args.blobDensity * (1 - torch.sqrt(d) / self.args.blobRadius)
     
     def forward(self, x, d):
         raise NotImplementedError()
@@ -68,7 +66,7 @@ class NeRFRenderer(nn.Module):
             if np.greater(self.meanDensity, 0) else self.densityT
         
         # TODO: use a larger thresh to extract a surface mesh from the density field, but this value is very empirical...
-        if self.opt.densityActivation == 'softplus':
+        if self.args.densityActivation == 'softplus':
             density_thresh = density_thresh * 25
         
         sigmas = np.zeros([resolution, resolution, resolution], dtype=np.float32)
@@ -260,7 +258,7 @@ class NeRFRenderer(nn.Module):
         results = {}
 
         if self.training:
-            xyzs, dirs, ts, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb, self.opt.dtGamma, self.opt.maxSteps)
+            xyzs, dirs, ts, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb, self.args.dtGamma, self.args.maxSteps)
             dirs = safeNormalise(dirs)
 
             if light_d.shape[0] > 1:
@@ -271,16 +269,16 @@ class NeRFRenderer(nn.Module):
             weights, weights_sum, depth, image = raymarching.composite_rays_train(sigmas, rgbs, ts, rays, T_thresh, binarize)
             
             # normals related regularizations
-            if self.opt.lambdaOrient > 0 and normals is not None:
+            if self.args.lambdaOrient > 0 and normals is not None:
                 # orientation loss 
                 loss_orient = weights.detach() * (normals * dirs).sum(-1).clamp(min=0) ** 2
                 results['loss_orient'] = loss_orient.mean()
             
-            if self.opt.lambda3dNormalSmooth > 0 and normals is not None:
+            if self.args.lambda3dNormalSmooth > 0 and normals is not None:
                 normals_perturb = self.normal(xyzs + torch.randn_like(xyzs) * 1e-2)
                 results['loss_normal_perturb'] = (normals - normals_perturb).abs().mean()
             
-            if (self.opt.lambda2dNormalSmooth > 0 or self.opt.lambdaNormal > 0) and normals is not None:
+            if (self.args.lambda2dNormalSmooth > 0 or self.args.lambdaNormal > 0) and normals is not None:
                 _, _, _, normal_image = raymarching.composite_rays_train(sigmas.detach(), (normals + 1) / 2, ts, rays, T_thresh, binarize)
                 results['normal_image'] = normal_image
             
@@ -302,7 +300,7 @@ class NeRFRenderer(nn.Module):
 
             step = 0
             
-            while step < self.opt.maxSteps: # hard coded max step
+            while step < self.args.maxSteps: # hard coded max step
 
                 # count alive rays 
                 n_alive = rays_alive.shape[0]
@@ -314,7 +312,7 @@ class NeRFRenderer(nn.Module):
                 # decide compact_steps
                 n_step = max(min(N // n_alive, 8), 1)
 
-                xyzs, dirs, ts = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb if step == 0 else False, self.opt.dtGamma, self.opt.maxSteps)
+                xyzs, dirs, ts = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb if step == 0 else False, self.args.dtGamma, self.args.maxSteps)
                 dirs = safeNormalise(dirs)
                 sigmas, rgbs, normals = self(xyzs, dirs, light_d, ratio=ambient_ratio, shading=shading)
                 raymarching.composite_rays(n_alive, n_step, rays_alive, rays_t, sigmas, rgbs, ts, weights_sum, depth, image, T_thresh, binarize)
@@ -326,7 +324,7 @@ class NeRFRenderer(nn.Module):
 
         # mix background color
         if bg_color is None:
-            if self.opt.bgRadius > 0:
+            if self.args.bgRadius > 0:
                 # use the bg model to calculate bg_color
                 bg_color = self.background(rays_d) # [N, 3]
             else:

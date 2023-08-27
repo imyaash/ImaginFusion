@@ -37,14 +37,14 @@ class MLP(nn.Module):
 
 class NeRFNetwork(NeRFRenderer):
     def __init__(self, 
-                 opt,
+                 args,
                  num_layers=3,
                  hidden_dim=64,
                  num_layers_bg=2,
                  hidden_dim_bg=32,
                  ):
         
-        super().__init__(opt)
+        super().__init__(args)
 
         self.num_layers = num_layers
         self.hidden_dim = hidden_dim
@@ -66,10 +66,10 @@ class NeRFNetwork(NeRFRenderer):
         # use torch MLP, as tcnn MLP doesn't impl second-order derivative
         self.sigma_net = MLP(self.in_dim, 4, hidden_dim, num_layers, bias=True)
 
-        self.density_activation = truncExp if self.opt.densityActivation == 'exp' else softplus
+        self.density_activation = truncExp if self.args.densityActivation == 'exp' else softplus
 
         # background network
-        if self.opt.bgRadius > 0:
+        if self.args.bgRadius > 0:
             self.num_layers_bg = num_layers_bg   
             self.hidden_dim_bg = hidden_dim_bg
             
@@ -170,10 +170,10 @@ class NeRFNetwork(NeRFRenderer):
             {'params': self.sigma_net.parameters(), 'lr': lr},
         ]        
 
-        if self.opt.bgRadius > 0:
+        if self.args.bgRadius > 0:
             params.append({'params': self.bg_net.parameters(), 'lr': lr})
         
-        if self.opt.dmtet and not self.opt.lock_geo:
+        if self.args.dmtet and not self.args.lock_geo:
             params.append({'params': self.sdf, 'lr': lr})
             params.append({'params': self.deform, 'lr': lr})
 
