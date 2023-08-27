@@ -21,5 +21,6 @@ args = Args(
     datasetSizeValid = 8,
     datasetSizeTest = 100
 )
+# try jitterPose 0.015 original is 0.2
 
 Pipeline(args)()

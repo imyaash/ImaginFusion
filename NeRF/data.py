@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 from torch.utils.data import DataLoader
-from utils.functions import circle_poses, rand_poses, getRays
+from utils.functions import circlePoses, randPoses, getRays
 
 class Dataset:
     def __init__(self, args, device, type = "train", H = 256, W = 256, size = 100):
@@ -21,12 +21,12 @@ class Dataset:
     
     def collateFn(self, idx):
         if self.training:
-            poses, dirs, thetas, phis, radius = rand_poses(
-                len(idx), self.device, self.args, radius_range = self.args.radiusRange,
-                theta_range = self.args.thetaRange, phi_range = self.args.phiRange,
-                return_dirs = True, angle_overhead = self.args.angleOverhead,
-                angle_front = self.args.angleFront,
-                uniform_sphere_rate = self.args.uniformSphereRate
+            poses, dirs, thetas, phis, radius = randPoses(
+                len(idx), self.device, self.args, radRange = self.args.radiusRange,
+                thetaRange = self.args.thetaRange, phiRange = self.args.phiRange,
+                returnDirs = True, angleOverhead = self.args.angleOverhead,
+                angleFront = self.args.angleFront,
+                uniSphRate = self.args.uniformSphereRate
             )
             fov = random.random() * (
                 self.args.fovyRange[1] - self.args.fovyRange[0]
@@ -35,9 +35,9 @@ class Dataset:
             thetas = torch.FloatTensor([self.args.defaultPolar]).to(self.device)
             phis = torch.FloatTensor([(idx[0] / self.size) * 360]).to(self.device)
             radius = torch.FloatTensor([self.args.defaultRadius]).to(self.device)
-            poses, dirs = circle_poses(
-                self.device, radius = radius, theta = thetas, phi = phis, return_dirs = True,
-                angle_overhead = self.args.angleOverhead, angle_front = self.args.angleFront
+            poses, dirs = circlePoses(
+                self.device, radius = radius, theta = thetas, phi = phis, returnDirs = True,
+                angleOverhead = self.args.angleOverhead, angleFront = self.args.angleFront
             )
             fov = self.args.defaultFovy
         focal = self.H / (2 * np.tan(np.deg2rad(fov) / 2))
@@ -94,9 +94,9 @@ class Dataset:
         radii = torch.FloatTensor(self.args.refRadii).to(self.device)
         thetas = torch.FloatTensor(self.args.refPolars).to(self.device)
         phis = torch.FloatTensor(self.args.refAzimuths).to(self.device)
-        poses, dirs = circle_poses(
-            self.device, radius = radii, theta = thetas, phi = phis, return_dirs = True,
-            angle_overhead = self.args.angleOverhead, angle_front = self.args.angleFront
+        poses, dirs = circlePoses(
+            self.device, radius = radii, theta = thetas, phi = phis, returnDirs = True,
+            angleOverhead = self.args.angleOverhead, angleFront = self.args.angleFront
         )
         fov = self.args.defaultFovy
         focal = H / (2 * np.tan(np.deg2rad(fov) / 2))

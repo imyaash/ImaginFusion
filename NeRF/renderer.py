@@ -7,7 +7,7 @@ import raymarching
 import numpy as np
 import torch.nn as nn
 from utils.mesh import meshDecimator, meshCleaner
-from utils.functions import customMeshGrid, safeNormalise
+from utils.functions import customMeshGrid, normalise
 
 class Renderer(nn.Module):
     def __init__(self, args):
@@ -211,7 +211,7 @@ class Renderer(nn.Module):
                     else self.aabb_infer
         )
         if lightD is None:
-            lightD = safeNormalise(
+            lightD = normalise(
                 raysO + torch.randn(3, device=raysO.device)
             )
         results = {}
@@ -221,7 +221,7 @@ class Renderer(nn.Module):
                 self.cascade, self.gridSize, nears, fars, perturb,
                 self.args.dtGamma, self.args.maxSteps
             )
-            dirs = safeNormalise(dirs)
+            dirs = normalise(dirs)
             if lightD.shape[0] > 1:
                 flattenRays = raymarching.flatten_rays(rays, xyzs.shape[0]).long()
                 lightD = lightD[flattenRays]
@@ -262,7 +262,7 @@ class Renderer(nn.Module):
                     self.density_bitfield, self.cascade, self.gridSize, nears, fars,
                     perturb if step == 0 else False, self.args.dtGamma, self.args.maxSteps
                 )
-                dirs = safeNormalise(dirs)
+                dirs = normalise(dirs)
                 sigmas, rgbs, normals = self(
                     xyzs, dirs, lightD, ratio = ambientRatio, shading = shading
                 )
