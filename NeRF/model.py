@@ -87,7 +87,7 @@ class NeRFNetwork(NeRFRenderer):
         h = self.sigma_net(enc)
 
         # sigma = self.density_activation(h[..., 0] + self.densityBlob(x))
-        sigma = self.density_activation(h[..., 0] + self.density_blob(x))
+        sigma = self.density_activation(h[..., 0] + self.densityBlob(x))
         albedo = torch.sigmoid(h[..., 1:])
 
         return sigma, albedo

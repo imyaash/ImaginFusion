@@ -1,14 +1,11 @@
 import os
-import math
 import cv2
-import numpy as np
-
+import math
 import torch
-import torch.nn as nn
-
-
 import mcubes
 import raymarching
+import numpy as np
+import torch.nn as nn
 from utils.mesh import meshDecimator, meshCleaner
 from utils.functions import customMeshGrid, safeNormalise
 
@@ -34,7 +31,7 @@ class NeRFRenderer(nn.Module):
         self.iterDensity = 0
     
     @torch.no_grad()
-    def density_blob(self, x):
+    def densityBlob(self, x):
         # x: [B, N, 3]
         
         d = (x ** 2).sum(-1)
@@ -50,13 +47,13 @@ class NeRFRenderer(nn.Module):
     def density(self, x):
         raise NotImplementedError()
 
-    def reset_extra_state(self):
+    def resetExtraState(self):
         self.density_grid.zero_()
         self.meanDensity = 0
         self.iterDensity = 0
 
     @torch.no_grad()
-    def export_mesh(self, path, resolution = None, decimateT = -1, S = 128):
+    def exportMesh(self, path, resolution = None, decimateT = -1, S = 128):
         if resolution is None:
             resolution = self.gridSize
         densityT = min(self.meanDensity, self.densityT) \
@@ -289,7 +286,7 @@ class NeRFRenderer(nn.Module):
         return results
 
     @torch.no_grad()
-    def update_extra_state(self, decay=0.95, S=128):
+    def updateExtraState(self, decay=0.95, S=128):
         tempGrid = -torch.ones_like(self.density_grid)
         X = torch.arange(
             self.gridSize, dtype = torch.int32, device = self.aabb_train.device
@@ -327,13 +324,5 @@ class NeRFRenderer(nn.Module):
         densityT = min(self.meanDensity, self.densityT)
         self.density_bitfield = raymarching.packbits(self.density_grid, densityT, self.density_bitfield)
 
-    def render(self, rays_o, rays_d, **kwargs):
-        # rays_o, rays_d: [B, N, 3]
-        # return: pred_rgb: [B, N, 3]
-        B, N = rays_o.shape[:2]
-        device = rays_o.device
-
-        # results = self.run(rays_o, rays_d, **kwargs)
-        results = self.run(rays_o, rays_d, **kwargs)
-
-        return results
+    def render(self, raysO, raysD, **kwargs):
+        return self.run(raysO, raysD, **kwargs)

@@ -318,7 +318,7 @@ class NeRFTrainer(object):
         #     path, resolution = self.opt.mcubesResolution,
         #     decimateT = self.opt.decimateTarget
         # )
-        self.model.export_mesh(
+        self.model.exportMesh(
             path, resolution = self.opt.mcubesResolution,
             decimateT = self.opt.decimateTarget
         )
@@ -341,7 +341,7 @@ class NeRFTrainer(object):
             if self.globalStep % self.opt.updateExtraInterval == 0:
                 with torch.cuda.amp.autocast(enabled = self.fp16):
                     # self.model.updateExtraState()
-                    self.model.update_extra_state()
+                    self.model.updateExtraState()
             
             self.localStep += 1
             self.globalStep += 1
