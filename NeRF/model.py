@@ -5,7 +5,7 @@ import tinycudann as tcnn
 from .renderer import Renderer
 import torch.nn.functional as F
 from utils.encoder import encoder
-from utils.functions import safeNormalise
+from utils.functions import normalise
 from utils.activator import truncExp, softplus
 
 class Network(nn.Module):
@@ -93,7 +93,7 @@ class NeRF(Renderer):
                 normal = -torch.autograd.grad(
                     torch.sum(sigma), x, create_graph=True
                 )[0]
-        normal = safeNormalise(normal)
+        normal = normalise(normal)
         normal = torch.nan_to_num(normal)
         return normal
     
@@ -110,7 +110,7 @@ class NeRF(Renderer):
                     normal = -torch.autograd.grad(
                         torch.sum(sigma), x, create_graph=True
                     )[0]
-            normal = safeNormalise(normal)
+            normal = normalise(normal)
             normal = torch.nan_to_num(normal)
             lambertian = ratio + (1 - ratio) * (normal * l).sum(-1).clamp(min=0)
             if shading == 'textureless':
