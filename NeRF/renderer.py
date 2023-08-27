@@ -51,7 +51,6 @@ class NeRFRenderer(nn.Module):
         raise NotImplementedError()
 
     def reset_extra_state(self):
-        # density grid
         self.density_grid.zero_()
         self.meanDensity = 0
         self.iterDensity = 0
@@ -76,13 +75,13 @@ class NeRFRenderer(nn.Module):
         Y = torch.linspace(-1, 1, resolution).split(S)
         Z = torch.linspace(-1, 1, resolution).split(S)
 
-        for xi, xs in enumerate(X):
-            for yi, ys in enumerate(Y):
-                for zi, zs in enumerate(Z):
-                    xx, yy, zz = customMeshGrid(xs, ys, zs)
+        for xi, x in enumerate(X):
+            for yi, y in enumerate(Y):
+                for zi, z in enumerate(Z):
+                    xx, yy, zz = customMeshGrid(x, y, z)
                     pts = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) # [S, 3]
                     val = self.density(pts.to(self.aabb_train.device))
-                    sigmas[xi * S: xi * S + len(xs), yi * S: yi * S + len(ys), zi * S: zi * S + len(zs)] = val['sigma'].reshape(len(xs), len(ys), len(zs)).detach().cpu().numpy() # [S, 1] --> [x, y, z]
+                    sigmas[xi * S: xi * S + len(x), yi * S: yi * S + len(y), zi * S: zi * S + len(z)] = val['sigma'].reshape(len(xs), len(y), len(z)).detach().cpu().numpy() # [S, 1] --> [x, y, z]
 
         print(f'[INFO] marching cubes thresh: {density_thresh} ({sigmas.min()} ~ {sigmas.max()})')
 
@@ -330,50 +329,42 @@ class NeRFRenderer(nn.Module):
 
     @torch.no_grad()
     def update_extra_state(self, decay=0.95, S=128):
-        # call before each epoch to update extra states.
-
-        
-        ### update density grid
-        tmp_grid = - torch.ones_like(self.density_grid)
-        
-        X = torch.arange(self.gridSize, dtype=torch.int32, device=self.aabb_train.device).split(S)
-        Y = torch.arange(self.gridSize, dtype=torch.int32, device=self.aabb_train.device).split(S)
-        Z = torch.arange(self.gridSize, dtype=torch.int32, device=self.aabb_train.device).split(S)
-
-        for xs in X:
-            for ys in Y:
-                for zs in Z:
-                    
-                    # construct points
-                    xx, yy, zz = customMeshGrid(xs, ys, zs)
-                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) # [N, 3], in [0, 128)
-                    indices = raymarching.morton3D(coords).long() # [N]
-                    xyzs = 2 * coords.float() / (self.gridSize - 1) - 1 # [N, 3] in [-1, 1]
-
-                    # cascading
+        tempGrid = -torch.ones_like(self.density_grid)
+        X = torch.arange(
+            self.gridSize, dtype = torch.int32, device = self.aabb_train.device
+        ).split(S)
+        Y = torch.arange(
+            self.gridSize, dtype = torch.int32, device = self.aabb_train.device
+        ).split(S)
+        Z = torch.arange(
+            self.gridSize, dtype = torch.int32, device = self.aabb_train.device
+        ).split(S)
+        for x in X:
+            for y in Y:
+                for z in Z:
+                    xx, yy, zz = customMeshGrid(x, y, z)
+                    coords = torch.cat(
+                        [
+                            xx.reshape(-1, 1),
+                            yy.reshape(-1, 1),
+                            zz.reshape(-1, 1)
+                        ], dim=-1
+                    )
+                    indices = raymarching.morton3D(coords).long()
+                    xyzs = 2 * coords.float() / (self.gridSize - 1) - 1
                     for cas in range(self.cascade):
                         bound = min(2 ** cas, self.bound)
-                        half_grid_size = bound / self.gridSize
-                        # scale to current cascade's resolution
-                        cas_xyzs = xyzs * (bound - half_grid_size)
-                        # add noise in [-hgs, hgs]
-                        cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
-                        # query density
-                        sigmas = self.density(cas_xyzs)['sigma'].reshape(-1).detach()
-                        # assign 
-                        tmp_grid[cas, indices] = sigmas
-        # ema update
-        valid_mask = self.density_grid >= 0
-        self.density_grid[valid_mask] = torch.maximum(self.density_grid[valid_mask] * decay, tmp_grid[valid_mask])
-        self.meanDensity = torch.mean(self.density_grid[valid_mask]).item()
+                        halfGridSize = bound / self.gridSize
+                        casXyzs = xyzs * (bound - halfGridSize)
+                        casXyzs += (torch.rand_like(casXyzs) * 2 - 1) * halfGridSize
+                        sigmas = self.density(casXyzs)['sigma'].reshape(-1).detach()
+                        tempGrid[cas, indices] = sigmas
+        validMask = self.density_grid >= 0
+        self.density_grid[validMask] = torch.maximum(self.density_grid[validMask] * decay, tempGrid[validMask])
+        self.meanDensity = torch.mean(self.density_grid[validMask]).item()
         self.iterDensity += 1
-
-        # convert to bitfield
-        density_thresh = min(self.meanDensity, self.densityT)
-        self.density_bitfield = raymarching.packbits(self.density_grid, density_thresh, self.density_bitfield)
-
-        # print(f'[density grid] min={self.density_grid.min().item():.4f}, max={self.density_grid.max().item():.4f}, mean={self.meanDensity:.4f}, occ_rate={(self.density_grid > density_thresh).sum() / (128**3 * self.cascade):.3f}')
-
+        densityT = min(self.meanDensity, self.densityT)
+        self.density_bitfield = raymarching.packbits(self.density_grid, densityT, self.density_bitfield)
 
     def render(self, rays_o, rays_d, mvp, h, w, staged=False, max_ray_batch=4096, **kwargs):
         # rays_o, rays_d: [B, N, 3]
