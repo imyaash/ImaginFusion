@@ -26,11 +26,11 @@ args = Args(
     writeVideo = True,
     datasetSizeTrain = 20,
     datasetSizeValid = 8,
-    datasetSizeTest = 100,
-    testInterval = 50
+    datasetSizeTest = 100
 )
 
 args.cuda_ray = True
+args.testInterval = max(int((args.iters / args.datasetSizeTrain) / 5), 5)
 
 args.expStartIter = args.expStartIter or 0
 args.expEndIter = args.expEndIter or args.iters
