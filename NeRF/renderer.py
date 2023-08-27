@@ -236,111 +236,95 @@ class NeRFRenderer(nn.Module):
 
         _export(v, f)
 
-    def run_cuda(self, rays_o, rays_d, light_d=None, ambient_ratio=1.0, shading='albedo', bg_color=None, perturb=False, T_thresh=1e-4, binarize=False, **kwargs):
-        # rays_o, rays_d: [B, N, 3]
-        # return: image: [B, N, 3], depth: [B, N]
-
-        prefix = rays_o.shape[:-1]
-        rays_o = rays_o.contiguous().view(-1, 3)
-        rays_d = rays_d.contiguous().view(-1, 3)
-
-        N = rays_o.shape[0] # B * N, in fact
-        device = rays_o.device
-
-        # pre-calculate near far
-        nears, fars = raymarching.near_far_from_aabb(rays_o, rays_d, self.aabb_train if self.training else self.aabb_infer)
-
-        # random sample light_d if not provided
-        if light_d is None:
-            # gaussian noise around the ray origin, so the light always face the view dir (avoid dark face)
-            light_d = safeNormalise(rays_o + torch.randn(3, device=rays_o.device)) # [N, 3]
-
+    def run(
+            self, raysO, raysD, lightD = None,
+            ambientRatio = 1.0, shading = 'albedo',
+            bgColor = None, perturb = False,
+            tThresh = 1e-4, binarise = False, **kwargs
+    ):
+        pfx = raysO.shape[:-1]
+        raysO = raysO.contiguous().view(-1, 3)
+        raysD = raysD.contiguous().view(-1, 3)
+        N = raysO.shape[0]
+        device = raysO.device
+        nears, fars = raymarching.near_far_from_aabb(
+            raysO, raysD, self.aabb_train \
+                if self.training \
+                    else self.aabb_infer
+        )
+        if lightD is None:
+            lightD = safeNormalise(
+                raysO + torch.randn(3, device=raysO.device)
+            )
         results = {}
-
         if self.training:
-            xyzs, dirs, ts, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb, self.args.dtGamma, self.args.maxSteps)
+            xyzs, dirs, ts, rays = raymarching.march_rays_train(
+                raysO, raysD, self.bound, self.density_bitfield,
+                self.cascade, self.gridSize, nears, fars, perturb,
+                self.args.dtGamma, self.args.maxSteps
+            )
             dirs = safeNormalise(dirs)
-
-            if light_d.shape[0] > 1:
-                flatten_rays = raymarching.flatten_rays(rays, xyzs.shape[0]).long()
-                light_d = light_d[flatten_rays]
-            
-            sigmas, rgbs, normals = self(xyzs, dirs, light_d, ratio=ambient_ratio, shading=shading)
-            weights, weights_sum, depth, image = raymarching.composite_rays_train(sigmas, rgbs, ts, rays, T_thresh, binarize)
-            
-            # normals related regularizations
+            if lightD.shape[0] > 1:
+                flattenRays = raymarching.flatten_rays(rays, xyzs.shape[0]).long()
+                lightD = lightD[flattenRays]
+            sigmas, rgbs, normals = self(
+                xyzs, dirs, lightD, ratio = ambientRatio, shading = shading
+            )
+            weights, weightsSum, depth, image = raymarching.composite_rays_train(
+                sigmas, rgbs, ts, rays, tThresh, binarise
+            )
             if self.args.lambdaOrient > 0 and normals is not None:
-                # orientation loss 
-                loss_orient = weights.detach() * (normals * dirs).sum(-1).clamp(min=0) ** 2
-                results['loss_orient'] = loss_orient.mean()
-            
+                lossOrient = weights.detach() * (normals * dirs).sum(-1).clamp(min=0) ** 2
+                results['loss_orient'] = lossOrient.mean()
             if self.args.lambda3dNormalSmooth > 0 and normals is not None:
-                normals_perturb = self.normal(xyzs + torch.randn_like(xyzs) * 1e-2)
-                results['loss_normal_perturb'] = (normals - normals_perturb).abs().mean()
-            
+                normalsPerturb = self.normal(xyzs + torch.randn_like(xyzs) * 1e-2)
+                results['loss_normal_perturb'] = (normals - normalsPerturb).abs().mean()
             if (self.args.lambda2dNormalSmooth > 0 or self.args.lambdaNormal > 0) and normals is not None:
-                _, _, _, normal_image = raymarching.composite_rays_train(sigmas.detach(), (normals + 1) / 2, ts, rays, T_thresh, binarize)
-                results['normal_image'] = normal_image
-            
-            # weights normalization
+                _, _, _, normalImage = raymarching.composite_rays_train(
+                    sigmas.detach(), (normals + 1) / 2, ts, rays, tThresh, binarise
+                )
+                results['normal_image'] = normalImage
             results['weights'] = weights
-
         else:
-           
-            # allocate outputs 
             dtype = torch.float32
-            
-            weights_sum = torch.zeros(N, dtype=dtype, device=device)
-            depth = torch.zeros(N, dtype=dtype, device=device)
-            image = torch.zeros(N, 3, dtype=dtype, device=device)
-            
-            n_alive = N
-            rays_alive = torch.arange(n_alive, dtype=torch.int32, device=device) # [N]
-            rays_t = nears.clone() # [N]
-
+            weightsSum = torch.zeros(N, dtype = dtype, device = device)
+            depth = torch.zeros(N, dtype = dtype, device = device)
+            image = torch.zeros(N, 3, dtype = dtype, device = device)
+            nAlive = N
+            raysAlive = torch.arange(nAlive, dtype = torch.int32, device = device)
+            raysT = nears.clone()
             step = 0
-            
-            while step < self.args.maxSteps: # hard coded max step
-
-                # count alive rays 
-                n_alive = rays_alive.shape[0]
-
-                # exit loop
-                if n_alive <= 0:
+            while step < self.args.maxSteps:
+                nAlive = raysAlive.shape[0]
+                if nAlive <= 0:
                     break
-
-                # decide compact_steps
-                n_step = max(min(N // n_alive, 8), 1)
-
-                xyzs, dirs, ts = raymarching.march_rays(n_alive, n_step, rays_alive, rays_t, rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.gridSize, nears, fars, perturb if step == 0 else False, self.args.dtGamma, self.args.maxSteps)
+                nStep = max(min(N // nAlive, 8), 1)
+                xyzs, dirs, ts = raymarching.march_rays(
+                    nAlive, nStep, raysAlive, raysT, raysO, raysD, self.bound,
+                    self.density_bitfield, self.cascade, self.gridSize, nears, fars,
+                    perturb if step == 0 else False, self.args.dtGamma, self.args.maxSteps
+                )
                 dirs = safeNormalise(dirs)
-                sigmas, rgbs, normals = self(xyzs, dirs, light_d, ratio=ambient_ratio, shading=shading)
-                raymarching.composite_rays(n_alive, n_step, rays_alive, rays_t, sigmas, rgbs, ts, weights_sum, depth, image, T_thresh, binarize)
-
-                rays_alive = rays_alive[rays_alive >= 0]
-                #print(f'step = {step}, n_step = {n_step}, n_alive = {n_alive}, xyzs: {xyzs.shape}')
-
-                step += n_step
-
-        # mix background color
-        if bg_color is None:
+                sigmas, rgbs, normals = self(
+                    xyzs, dirs, lightD, ratio = ambientRatio, shading = shading
+                )
+                raymarching.composite_rays(
+                    nAlive, nStep, raysAlive, raysT, sigmas, rgbs, ts, weightsSum, depth, image, tThresh, binarise
+                )
+                raysAlive = raysAlive[raysAlive >= 0]
+                step += nStep
+        if bgColor is None:
             if self.args.bgRadius > 0:
-                # use the bg model to calculate bg_color
-                bg_color = self.background(rays_d) # [N, 3]
+                bgColor = self.background(raysD)
             else:
-                bg_color = 1
-
-        image = image + (1 - weights_sum).unsqueeze(-1) * bg_color
-        image = image.view(*prefix, 3)
-
-        depth = depth.view(*prefix)
-
-        weights_sum = weights_sum.reshape(*prefix)
-
+                bgColor = 1
+        image = image + (1 - weightsSum).unsqueeze(-1) * bgColor
+        image = image.view(*pfx, 3)
+        depth = depth.view(*pfx)
+        weightsSum = weightsSum.reshape(*pfx)
         results['image'] = image
         results['depth'] = depth
-        results['weights_sum'] = weights_sum
-        
+        results['weights_sum'] = weightsSum
         return results
 
 
@@ -397,6 +381,7 @@ class NeRFRenderer(nn.Module):
         B, N = rays_o.shape[:2]
         device = rays_o.device
 
-        results = self.run_cuda(rays_o, rays_d, **kwargs)
+        # results = self.run(rays_o, rays_d, **kwargs)
+        results = self.run(rays_o, rays_d, **kwargs)
 
         return results
