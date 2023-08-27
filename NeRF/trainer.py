@@ -302,7 +302,7 @@ class NeRFTrainer(object):
         # )
         self.model.export_mesh(
             path, resolution = self.opt.mcubesResolution,
-            decimate_target = self.opt.decimateTarget
+            decimateT = self.opt.decimateTarget
         )
         self.log(f"--> Finished saving mesh.")
     
