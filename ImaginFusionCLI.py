@@ -14,7 +14,6 @@ def main():
     parser.add_argument("--maxSteps", type = int, default = 512, help = "Max steps")
     parser.add_argument("--h", type = int, default = 64, help = "Height")
     parser.add_argument("--w", type = int, default = 64, help = "Width")
-    parser.add_argument("--writeVideo", action = "store_true", help = "Write video")
     parser.add_argument("--datasetSizeTrain", type = int, default = 20, help = "Dataset size for training")
     parser.add_argument("--datasetSizeValid", type = int, default = 8, help = "Dataset size for validation")
     parser.add_argument("--datasetSizeTest", type = int, default = 100, help = "Dataset size for testing")
@@ -35,10 +34,10 @@ def main():
         maxSteps = parsedArgs.maxSteps,
         h = parsedArgs.h,
         w = parsedArgs.w,
-        writeVideo = parsedArgs.writeVideo,
         datasetSizeTrain = parsedArgs.datasetSizeTrain,
         datasetSizeValid = parsedArgs.datasetSizeValid,
-        datasetSizeTest = parsedArgs.datasetSizeTest
+        datasetSizeTest = parsedArgs.datasetSizeTest,
+        jitterCentre = 0.015
     )
     Pipeline(args)()
 

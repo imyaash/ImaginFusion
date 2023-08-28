@@ -342,8 +342,8 @@ class Trainer(object):
                     preds, predsDepths, loss = self.eval_step(data)
                 lossVal = loss.item()
                 totalLoss += lossVal
-                savePath = os.path.join(self.workspace, "validation", f"{name}_{self.localStep:04d}Rgb.png")
-                savePathDepth = os.path.join(self.workspace, "validation", f"{name}_{self.localStep:04d}Depth.png")
+                savePath = os.path.join(self.workspace, "validation", f"{name}-{self.localStep:04d}Rgb.png")
+                savePathDepth = os.path.join(self.workspace, "validation", f"{name}-{self.localStep:04d}Depth.png")
                 os.makedirs(os.path.dirname(savePath), exist_ok = True)
                 pred = preds[0].detach().cpu().numpy()
                 pred = (pred * 255.0).astype(np.uint8)
@@ -369,7 +369,8 @@ class Trainer(object):
             metric.clear()
         if self.ema is not None:
             self.ema.restore()
-        self.log("Evaluation epoch (self.epoch) finished.")
+        self.log(f"Evaluation epoch {self.epoch} finished.")
+        print(f"Evaluation epoch {self.epoch} finished.")
     
     def test(self, loader, savePath = None, name = None, writeVideo = True):
         if savePath is None:
