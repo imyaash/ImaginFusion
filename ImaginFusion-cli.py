@@ -40,8 +40,8 @@ def main():
         w = parsedArgs.w,
         datasetSizeTrain = parsedArgs.datasetSizeTrain,
         datasetSizeValid = parsedArgs.datasetSizeValid,
-        datasetSizeTest = parsedArgs.datasetSizeTest,
-        jitterCentre = 0.015
+        datasetSizeTest = parsedArgs.datasetSizeTest
+        # try 0.015 jitterCentre
     )
     Pipeline(args)()
 

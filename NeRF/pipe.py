@@ -13,7 +13,7 @@ class Pipeline:
             args
     ):
         self.args = args
-        self.args.testInterval = max(int((self.args.iters / self.args.datasetSizeTrain) / 5), 20)
+        self.args.testInterval = max(int((self.args.iters / self.args.datasetSizeTrain) / 5), 10)
         self.args.expStartIter = self.args.expStartIter or 0
         self.args.expEndIter = self.args.expEndIter or self.args.iters
         if self.args.progressiveView:
