@@ -11,3 +11,4 @@ ImaginFusionGUI.py
 index.html
 interface.py
 model.py
+__pycache__/
