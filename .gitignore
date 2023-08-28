@@ -7,3 +7,7 @@ sdm/__pycache__/
 freqencoder/__pycache__/
 raymarching/__pycache__/
 utils/__pycache__/
+ImaginFusionGUI.py
+index.html
+interface.py
+model.py

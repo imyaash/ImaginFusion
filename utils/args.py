@@ -72,7 +72,7 @@ class Args(object):
             datasetSizeTest = 100, # frames to render in the turntable video in test time
             expStartIter = None, # start iter # for experiment, to calculate progressive_view and progressive_level
             expEndIter = None, # end iter # for experiment, to calculate progressive_view and progressive_level
-            writeVideo = False,
+            writeVideo = True, # write video at test
             emaDecay = 0.95, # Exponential moving average decay for training NeRF
             schedulerUpdateEveryStep = True, # Update scheduler every training step
     ):

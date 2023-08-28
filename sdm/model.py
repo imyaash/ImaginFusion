@@ -36,6 +36,10 @@ class StableDiffusionModel(nn.Module):
                 modelKey = "CompVis/stable-diffusion-v1-4"
             elif self.version == "1.5":
                 modelKey = "runwayml/stable-diffusion-v1-5"
+            elif self.version == "2.1-base":
+                modelKey = "stabilityai/stable-diffusion-2-1-base"
+            elif self.version == "2.0-base":
+                modelKey = "stabilityai/stable-diffusion-2-base"
             else:
                 raise ValueError(f"Unsupported stable-diffusion version {self.version}")
             
