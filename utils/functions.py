@@ -125,14 +125,20 @@ def randPoses(
         size,
         device,
         args,
-        radRange = [1, 1.5],
-        thetaRange = [0, 120],
-        phiRange = [0, 360],
+        radRange = None,
+        thetaRange = None,
+        phiRange = None,
         returnDirs = False,
         angleOverhead = 30,
         angleFront = 60,
         uniSphRate = 0.5
 ):
+    if radRange is None:
+        radRange = [1, 1.5]
+    if thetaRange is None:
+        thetaRange = [0, 120]
+    if phiRange is None:
+        phiRange = [0, 360]
     thetaRange = np.array(thetaRange) / 180 * np.pi
     phiRange = np.array(phiRange) / 180 * np.pi
     angleOverhead = angleOverhead / 180 * np.pi

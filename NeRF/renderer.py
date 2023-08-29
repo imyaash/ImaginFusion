@@ -169,7 +169,7 @@ class Renderer(nn.Module):
             cv2.imwrite(os.path.join(path, f'{name}Albedo.png'), feats)
             objFile = os.path.join(path, f'{name}Mesh.obj')
             mtlFile = os.path.join(path, f'{name}Mesh.mtl')
-            print(f"Writing Mesh (.onj) to {objFile}")
+            print(f"Writing Mesh (.obj) to {objFile}")
             with open(objFile, "w") as fp:
                 fp.write(f'mtllib {name}Mesh.mtl \n')
                 print(f"Writing Vertices {vnp.shape}")
@@ -199,7 +199,7 @@ class Renderer(nn.Module):
             ambientRatio = 1.0, shading = 'albedo',
             bgColor = None, perturb = False,
             tThresh = 1e-4, binarise = False, **test
-    ):
+    ):  # sourcery skip: low-code-quality
         pfx = raysO.shape[:-1]
         raysO = raysO.contiguous().view(-1, 3)
         raysD = raysD.contiguous().view(-1, 3)
@@ -207,13 +207,12 @@ class Renderer(nn.Module):
         device = raysO.device
         nears, fars = raymarching.near_far_from_aabb(
             raysO, raysD, self.aabb_train \
-                if self.training \
-                    else self.aabb_infer
+                    if self.training \
+                        else self.aabb_infer
         )
-        if lightD is None:
-            lightD = normalise(
-                raysO + torch.randn(3, device=raysO.device)
-            )
+        lightD = normalise(raysO + torch.randn(3, device=raysO.device)) \
+                if lightD is None \
+                    else lightD
         results = {}
         if self.training:
             xyzs, dirs, ts, rays = raymarching.march_rays_train(
@@ -272,10 +271,7 @@ class Renderer(nn.Module):
                 raysAlive = raysAlive[raysAlive >= 0]
                 step += nStep
         if bgColor is None:
-            if self.args.bgRadius > 0:
-                bgColor = self.background(raysD)
-            else:
-                bgColor = 1
+            bgColor = self.background(raysD) if self.args.bgRadius > 0 else 1
         image = image + (1 - weightsSum).unsqueeze(-1) * bgColor
         image = image.view(*pfx, 3)
         depth = depth.view(*pfx)

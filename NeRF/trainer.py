@@ -27,7 +27,7 @@ class Trainer(object):
             optimiser = None,
             lrScheduler = None,
             emaDecay = None,
-            metrics = [],
+            metrics=None,
             device = None,
             verbose = True,
             fp16 = False,
@@ -37,7 +37,9 @@ class Trainer(object):
             reportMetricAtTraining = False,
             useTensorboardX = True,
             schedulerUpdateEveryStep = False
-    ):
+    ):  # sourcery skip: low-code-quality
+        if metrics is None:
+            metrics = []
         self.expName = expName
         self.args = args
         self.verbose = verbose
@@ -98,15 +100,15 @@ class Trainer(object):
         self.log("Arguments:")
         for key, value in args.__dict__.items():
             self.log(f"{key}: {value}")
-        self.log(f'[INFO] Trainer: {self.expName} | {self.timeStamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
-        self.log(f'[INFO] #parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
+        self.log(f'Trainer: {self.expName} | {self.timeStamp} | {self.device} | {"fp16" if self.fp16 else "fp32"} | {self.workspace}')
+        self.log(f'Parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
     
     @torch.no_grad()
     def prepareEmbeddings(self):
         self.embeddings["default"] = self.guidance.getTextEmbeddings([self.args.posPrompt])
         self.embeddings["uncond"] = self.guidance.getTextEmbeddings([self.args.negPrompt])
         for d in ["front", "side", "back"]:
-            self.embeddings[d] = self.guidance.getTextEmbeddings([f"RAW photo, {self.args.posPrompt}, {d} view, uhd, 8k, high quality"])
+            self.embeddings[d] = self.guidance.getTextEmbeddings([f"RAW photo, {self.args.posPrompt}, uhd, 8k, high quality, {d} view"])
     
     def __del__(self):
         if self.logPtr:
@@ -117,7 +119,7 @@ class Trainer(object):
             print(*args, file = self.logPtr)
             self.logPtr.flush()
     
-    def train_step(self, data):
+    def train_step(self, data):  # sourcery skip: low-code-quality
         expIterRatio = (self.globalStep - self.args.expStartIter) / (self.args.expEndIter - self.args.expStartIter)
         if self.args.progressiveView:
             r = min(1.0, self.args.progressiveViewInitRatio + 2.0 * expIterRatio)
