@@ -12,6 +12,12 @@ from diffusers import DDIMScheduler, StableDiffusionPipeline
 logging.set_verbosity_error()
 
 def seeder(seed):
+    """
+    Set random seed for reproducibility.
+
+    Args:
+        seed (int): Random seed.
+    """
     if seed is not None:
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -19,6 +25,39 @@ def seeder(seed):
         torch.cuda.manual_seed_all(seed)
 
 class StableDiffusionModel(nn.Module):
+    """
+    A class representing a Stable Diffusion Model for image generation.
+
+    Args:
+        device (str): The device to run the model on (e.g., "cuda" or "cpu").
+        fp16 (bool): Whether to use float16 precision.
+        version (str): The version of the stable diffusion model to use.
+        hfModelKey (str): HuggingFace model key for a custom pretrained stable-diffusion model.
+        tRange (list): A list specifying the range for the number of diffusion steps.
+
+    Attributes:
+        device (str): The device on which the model is running.
+        version (str): The version of the stable diffusion model being used.
+        modelPath (str): The path to the pretrained stable-diffusion model.
+        precisionT (torch.dtype): The precision type for model tensors.
+        vae (nn.Module): The Variational Autoencoder component of the model.
+        tokenizer: The text tokenizer used by the model.
+        textEncoder: The text encoder used by the model.
+        unet: The UNet component of the model.
+        scheduler: The diffusion scheduler used by the model.
+        numSteps (int): The total number of diffusion steps.
+        minSteps (int): The minimum number of diffusion steps in the specified range.
+        maxSteps (int): The maximum number of diffusion steps in the specified range.
+        alphas (torch.Tensor): The alpha values used in the diffusion process.
+
+    Methods:
+        getTextEmbeddings(prompt): Get text embeddings for a given prompt.
+        produceLatents(embeddings, h, w, numSteps, guidanceScale, latents): Generate latent vectors.
+        decodeLatents(latents): Decode latent vectors into images.
+        encodeImages(images): Encode images into latent vectors.
+        trainStep(embeddings, predRGB, guidanceScale, asLatent, gradScale): Perform a training step.
+
+    """
     def __init__(self, device, fp16, version = "2.1", hfModelKey = None, tRange=None):
         if tRange is None:
             tRange = [0.02, 0.98]
@@ -27,6 +66,7 @@ class StableDiffusionModel(nn.Module):
         self.device = device
         self.version = version
 
+        # Model version check
         if hfModelKey is not None:
             print(f"Using custom pretrained stable-diffusion model from HuggingFace {hfModelKey}")
             modelKey = hfModelKey
@@ -42,10 +82,12 @@ class StableDiffusionModel(nn.Module):
             modelKey = "stabilityai/stable-diffusion-2-base"
         else:
             raise ValueError(f"Unsupported stable-diffusion version {self.version}")
-
+        
         modelPath = f"sdm/pretrained/{modelKey}"
+        # Loading model path ckpts.
         if os.path.exists(modelPath):
             print(f"Loading pretrained stable-diffusion model from {modelPath}")
+        # Downloading & saving the model ckpts.
         else:
             print(f"Could not find pretrained stable-diffusion model at {modelPath}. Downloading and saving to {modelPath}.")
             os.makedirs(modelPath, exist_ok = True)
@@ -72,6 +114,7 @@ class StableDiffusionModel(nn.Module):
         # Deleting the pretrained model to free VRAM
         del model
 
+        # Setting model scheduler parameters
         self.numSteps = self.scheduler.config.num_train_timesteps
         self.minSteps = int(self.numSteps * tRange[0])
         self.maxSteps = int(self.numSteps * tRange[1])
@@ -81,10 +124,33 @@ class StableDiffusionModel(nn.Module):
     
     @torch.no_grad()
     def getTextEmbeddings(self, prompt):
+        """
+        Get text embeddings for a given text prompt.
+
+        Args:
+            prompt (str): The text prompt for which embeddings are to be generated.
+
+        Returns:
+            torch.Tensor: Text embeddings dor the input prompt.
+        """
         inputs = self.tokenizer(prompt, padding = "max_length", max_length = self.tokenizer.model_max_length, return_tensors = "pt")
         return self.textEncoder(inputs.input_ids.to(self.device))[0]
     
     def produceLatents(self, embeddings, h = 512, w = 512, numSteps = 50, guidanceScale = 7.5, latents = None):
+        """
+        Generate latent vectors.
+
+        Args:
+            embeddings (torch.Tensor): Text embeddings.
+            h (int, optional): Height of the generated image. Defaults to 512.
+            w (int, optional): Width of the generated image. Defaults to 512.
+            numSteps (int, optional): Number of diffusion steps. Defaults to 50.
+            guidanceScale (float, optional): Scaling factor for guidance. Defaults to 7.5.
+            latents (torch.Tensor, optional): Latent vectors. Defaults to None.
+
+        Returns:
+            torch.Tensor: Generated latent vectors.
+        """
         if latents is None:
             latents = torch.randn((embeddings.shape[0] // 2, self.unet.config.in_channels, h // 8, w // 8), device = self.device, dtype = self.precisionT)
         self.scheduler.set_timesteps(numSteps)
@@ -97,17 +163,48 @@ class StableDiffusionModel(nn.Module):
         return latents
     
     def decodeLatents(self, latents):
+        """
+        Decode latent vectors into images.
+
+        Args:
+            latents (torch.Tensor): Latent vectors to be decoded.
+
+        Returns:
+            torch.Tensor: Decoded images.
+        """
         latents = 1 / self.vae.config.scaling_factor * latents
         image = self.vae.decode(latents).sample
         image = (image / 2 + 0.5).clamp(0, 1)
         return image
     
     def encodeImages(self, images):
+        """
+        Encode images into latent vectors.
+
+        Args:
+            images (torch.Tensor): Images to be encoded.
+
+        Returns:
+            torch.Tensor: Encoded latent vectors.
+        """
         images = 2 * images - 1
         posterior = self.vae.encode(images).latent_dist
         return posterior.sample() * self.vae.config.scaling_factor
     
     def trainStep(self, embeddings, predRGB, guidanceScale = 100, asLatent = False, gradScale = 1):
+        """
+        Training step.
+
+        Args:
+            embeddings (torch.Tensor): Text embeddings.
+            predRGB (torch.Tensor): Predicted RGB images.
+            guidanceScale (int, optional): Scaling factor for guidance. Defaults to 100.
+            asLatent (bool, optional): If True, use "predRGB" as latent vectors. Defaults to False.
+            gradScale (int, optional): Scaling factor for gradients. Defaults to 1.
+
+        Returns:
+            torch.Tensor: Training loss
+        """
         if asLatent:
             latents = F.interpolate(predRGB, (64, 64), mode = "bilinear", align_corners = False) * 2 - 1
         else:
@@ -130,19 +227,3 @@ class StableDiffusionModel(nn.Module):
         grad = torch.nan_to_num(grad)
 
         return (grad * latents).sum()
-    
-    def txt2Img(self, prompt, negetivePrompt = "", h = 512, w = 512, numSteps = 100, guidanceScale = 7.5):
-        if isinstance(prompt, str):
-            prompt = [prompt]
-        if isinstance(negetivePrompt, str):
-            negetivePrompt = [negetivePrompt]
-        
-        positiveEmbeddings = self.getTextEmbeddings(prompt)
-        negetiveEmbeddings = self.getTextEmbeddings(negetivePrompt)
-        embeddings = torch.cat([positiveEmbeddings, negetiveEmbeddings], dim = 0)
-
-        latents = self.produceLatents(embeddings, h = h, w = w, numSteps = numSteps, guidanceScale = guidanceScale)
-        image = self.decodeLatents(latents)
-        image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
-        image = (image * 255).round().astype("uint8")
-        return image
