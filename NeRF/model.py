@@ -9,6 +9,26 @@ from utils.functions import normalise
 from utils.activator import truncExp, softplus
 
 class Network(nn.Module):
+    """
+    Neural Network module consisting of multiple linear layers.
+
+    Args:
+        inDim (int): Input dimension.
+        outDim (int): Output dimension.
+        hiddenDim (int): Hidden dimension.
+        nLayers (int): Number of layers in the network.
+        bias (bool): Whether to include bias terms in linear layers.
+
+    Attributes:
+        inDim (int): Input dimension.
+        outDim (int): Output dimension.
+        hiddenDim (int): Hidden dimension.
+        nLayers (int): Number of layers in the network.
+        network (nn.ModuleList): List of linear layers.
+
+    Methods:
+        forward(x): Forward pass through the network.
+    """
     def __init__(self, inDim, outDim, hiddenDim, nLayers, bias = True):
         super().__init__()
         self.inDim = inDim
@@ -31,6 +51,15 @@ class Network(nn.Module):
         )
     
     def forward(self, x):
+        """
+        Forward pass through the network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         for layer in range(self.nLayers):
             x = self.network[layer](x)
             if layer != self.nLayers - 1:
@@ -39,6 +68,37 @@ class Network(nn.Module):
 
 
 class NeRF(Renderer):
+    """
+    Neural Radiance Fields (NeRF) renderer.
+
+    Args:
+        args: Arguments for the renderer.
+        nLayers (int): Number of layers in the NeRF network.
+        hiddenDim (int): Hidden dimension of the NeRF network.
+        nLayersBG (int): Number of layers in the background network.
+        hiddenDimBG (int): Hidden dimension of the background network.
+
+    Attributes:
+        nLayers (int): Number of layers in the NeRF network.
+        hiddenDim (int): Hidden dimension of the NeRF network.
+        encoder (tcnn.Encoding): TinyCUDA neural network encoder.
+        inDim (int): Input dimension of the encoder.
+        sigmaNet (Network): NeRF network for predicting sigma and albedo.
+        densityActivation (function): Activation function for density prediction.
+        nLayersBG (int): Number of layers in the background network.
+        hiddenDimBG (int): Hidden dimension of the background network.
+        encoderBG (nn.Module): Background encoder.
+        inDimBG (int): Input dimension of the background encoder.
+        netBG (Network): Background network.
+
+    Methods:
+        forwardC(x): Forward pass for NeRF color prediction.
+        normal(x): Compute surface normals.
+        forward(x, d, l, ratio, shading): Forward pass for NeRF rendering.
+        density(x): Predict density values.
+        background(d): Predict background values.
+        get_params(lr): Get network parameters and learning rates.
+    """
     def __init__(
             self,
             args,
@@ -79,6 +139,15 @@ class NeRF(Renderer):
             self.netBG = None
 
     def forwardC(self, x):
+        """
+        Forward pass for NeRF colour prediction.
+
+        Args:
+            x (torch.Tensor): Input coordinates.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Sigma and albedo predictions.
+        """
         enc = self.encoder((x + self.bound) / (2 * self.bound)).float()
         h = self.sigmaNet(enc)
         sigma = self.densityActivation(h[..., 0] + self.densityBlob(x))
@@ -86,6 +155,15 @@ class NeRF(Renderer):
         return sigma, albedo
     
     def normal(self, x):
+        """
+        Compute surface normals.
+
+        Args:
+            x (torch.Tensor): Input coordinates.
+
+        Returns:
+            torch.Tensor: Surface normals.
+        """
         with torch.enable_grad():
             with torch.cuda.amp.autocast(enabled=False):
                 x.requires_grad_(True)
@@ -98,6 +176,19 @@ class NeRF(Renderer):
         return normal
     
     def forward(self, x, d, l = None, ratio = 1, shading = 'albedo'):
+        """
+        Forward pass for NeRF rendering.
+
+        Args:
+            x (torch.Tensor): Input coordinates.
+            d (torch.Tensor): Depth values.
+            l (torch.Tensor, optional): Light direction vectors. Defaults to None.
+            ratio (int, optional): Lambertian ratio. Defaults to 1.
+            shading (str, optional): Shading mode ("albedo", "normal", "textureless"). Defaults to 'albedo'.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Sigma, colour, and normal predictions.
+        """
         if shading == 'albedo':
             sigma, albedo = self.forwardC(x)
             normal = None
@@ -121,7 +212,16 @@ class NeRF(Renderer):
                 color = albedo * lambertian.unsqueeze(-1)
         return sigma, color, normal
       
-    def density(self, x):        
+    def density(self, x):
+        """
+        Predict density values.
+
+        Args:
+            x (torch.Tensor): Input coordinates.
+
+        Returns:
+            Dict[str, torch.Tensor]: Predicted sigma and albedo.
+        """     
         sigma, albedo = self.forwardC(x)
         return {
             'sigma': sigma,
@@ -129,11 +229,29 @@ class NeRF(Renderer):
         }
 
     def background(self, d):
+        """
+        Predict background values.
+
+        Args:
+            d (torch.Tensor): Depth values.
+
+        Returns:
+            torch.Tensor: Predicted background values.
+        """
         h = self.encoderBG(d)
         h = self.netBG(h)
         return torch.sigmoid(h)
 
     def get_params(self, lr):
+        """
+        Get network parameters and learning rate.
+
+        Args:
+            lr (float): Learning rate.
+
+        Returns:
+            List[Dist[str, Union[nn.Parameter, float]]]: List of parameter dictionaries.
+        """
         params = [
             {
                 'params': self.encoder.parameters(),

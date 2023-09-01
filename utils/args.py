@@ -1,4 +1,86 @@
 class Args(object):
+    """
+    A configuration class for managing various parameters and hyperparameters used in the NeRF training pipeline.
+
+    Args:
+        posPrompt (str): A positive text prompt.
+        negPrompt (str): A negative text prompt.
+        expName (str): Experiment name.
+        workspace (str): Workspace directory.
+        fp16 (bool): Whether to use FP16 precision.
+        seed (int): Random seed for reproducibility.
+        sdVersion (str): Stable Diffusion version.
+        hfModelKey: High-frequency model key.
+        evalInterval (int): Number of training iterations between evaluations on the validation set.
+        testInterval (int): Number of training iterations between testing on the test set.
+        guidanceScale (int): Guidance scale for stable diffusion.
+        saveMesh (bool): Whether to save the mesh.
+        mcubesResolution (int): Resolution for extracting the mesh.
+        decimateTarget (float): Target for mesh decimation.
+        iters (int): Number of training iterations.
+        lr (float): Maximum learning rate.
+        maxSteps (int): Maximum number of steps sampled per ray.
+        updateExtraInterval (int): Iteration interval to update extra status.
+        latentIterRatio (float): Ratio of latent iterations.
+        albedoIterRatio (float): Ratio of albedo iterations.
+        minAmbientRatio (float): Minimum ambient ratio.
+        texturelessRatio (float): Textureless ratio.
+        jitterPose (bool): Adding jitter to randomly sampled camera poses.
+        jitterCentre (float): Amount of jitter to add to sampled camera pose's center.
+        jitterTarget (float): Amount of jitter to add to sampled camera pose's target.
+        jitterUp (float): Amount of jitter to add to sampled camera pose's up-axis.
+        uniformSphereRate (float): Probability of sampling camera location uniformly.
+        gradClip (float): Clip grad for all gradients.
+        gradClipRGB (float): Clip grad of RGB space grad.
+        bgRadius (float): Radius of the background sphere.
+        densityActivation (str): Density activation function ("exp" or "softplus").
+        densityThresh (float): Threshold for density grid to be occupied.
+        blobDensity (float): Max density for density blob.
+        blobRadius (float): Controlling the radius for density blob.
+        optim (str): Optimization function.
+        w (int): Render width for training NeRF.
+        h (int): Render height for training NeRF.
+        knownViewScale (float): Multiply h/w by this for known view rendering.
+        batchSize (int): Number of images to be rendered per batch.
+        bound (int): Assume the scene is bounded in box(-bound, bound)x.
+        dtGamma (float): dt_gamma (>=0) for adaptive ray marching. Set to 0 to disable, >0 to accelerate rendering (but usually with worse quality).
+        minNear (float): Minimum near distance for the camera.
+        radiusRange (list): Training camera radius range.
+        thetaRange (list): Training camera along the polar axis (up-down).
+        phiRange (list): Training camera along the azimuth axis (left-right).
+        fovyRange (list): Training camera fovy range.
+        defaultRadius (float): Radius for the default view.
+        defaultPolar (float): Polar for the default view.
+        defaultAzimuth (float): Azimuth for the default view.
+        defaultFovy (float): Fovy for the default view.
+        progressiveView (bool): Progressively expand view sampling range from default to full.
+        progressiveViewInitRatio (float): Initial ratio of the final range.
+        progressiveLevel (bool): Progressively increase grid encoder's max level.
+        angleOverhead (float): Overhead angle.
+        angleFront (float): Front angle.
+        tRange (list): Range for t values.
+        dontOverrideTRange (bool): Whether to override t range.
+        lambdaEntropy (float): Loss scale for alpha entropy.
+        lambdaOpacity (float): Loss scale for alpha value.
+        lambdaOrient (float): Loss scale for orientation.
+        lambdaGuidance (float): Loss scale for guidance.
+        lambdaNormal (float): Loss scale for normal map.
+        lambda2dNormalSmooth (float): Loss scale for 2D normal image smoothness.
+        lambda3dNormalSmooth (float): Loss scale for 3D normal image smoothness.
+        H (int): Mesh height for validation.
+        W (int): Mesh width for validation.
+        datasetSizeTrain (int): Length of the training dataset.
+        datasetSizeValid (int): Number of frames to render in the turntable video during validation.
+        datasetSizeTest (int): Number of frames to render in the turntable video during test time.
+        expStartIter (int): Start iteration for experiment.
+        expEndIter (int): End iteration for experiment.
+        writeVideo (bool): Whether to write video during testing.
+        emaDecay (float): Exponential moving average decay for training NeRF.
+        schedulerUpdateEveryStep (bool): Update scheduler every training step.
+        refRadii (list): Reference radii.
+        refPolars (list): Reference polar angles.
+        refAzimuths (list): Reference azimuth angles.
+    """
     def __init__(
             self,
             posPrompt = "",
@@ -9,73 +91,83 @@ class Args(object):
             seed = None,
             sdVersion = "2.1",
             hfModelKey = None,
-            evalInterval = 1, # Number of training iterations between every evaluation on valid set
-            testInterval = 100, # Number of training iterations between every test on test set
-            guidanceScale = 100, # Guidance scale for stabel-diffusion
-            saveMesh = True, # Whether to save the mesh
-            mcubesResolution = 256, # Resolution for extracting mesh
-            decimateTarget = 5e4, # Target for mesh decimation
-            iters = 10000, # Number of iterations for training
-            lr = 1e-3, # Max learning rate
-            maxSteps = 1024, # Maximum number of steps sampled per ray
-            updateExtraInterval = 16, # Iteration interval to update extra status
+            evalInterval = 1,
+            testInterval = 100,
+            guidanceScale = 100,
+            saveMesh = True,
+            mcubesResolution = 256,
+            decimateTarget = 5e4,
+            iters = 10000,
+            lr = 1e-3,
+            maxSteps = 1024,
+            updateExtraInterval = 16,
             latentIterRatio = 0.2,
             albedoIterRatio = 0,
             minAmbientRatio = 0.1,
             texturelessRatio = 0.2,
-            jitterPose = True, # Adding jitter to randomlysampled camera poses
-            jitterCentre = 0.2, # Amount of jitter to add to sampled camera pose's centre
-            jitterTarget = 0.2, # Amount of jitter to add to sampled camera pose's target
-            jitterUp = 0.02, # Amount of jitter to add to sampled camera pose's up-axis
-            uniformSphereRate = 0, # Probability of sampling camera location uniformly
-            gradClip = -1, # Clip grad for all gradients
-            gradClipRGB = 1, # Clip grad of rgb space grad
-            bgRadius = 1.4, # Radius of background sphere
-            densityActivation = "exp", # density activation function ["exp", "softplus"]
-            densityThresh = 10, # threshold for density grid to be occupied
-            blobDensity = 5, # Max density for density blob
-            blobRadius = 0.2, # Cantrolling the radius for density blob
-            optim = "adan", # Optimisation function
-            w = 64, # Render width for training NeRF
-            h = 64, # Render height for training NeRF
-            knownViewScale = 1.5, # multiply --h/w by this for known view rendering
-            batchSize = 1, # Images to be rendered per batch
-            bound = 1, # assume the scene is bounded in box(-bound, bound)x
-            dtGamma = 0, # dt_gamma (>=0) for adaptive ray marching. set to 0 to disable, >0 to accelerate rendering (but usually with worse quality)
-            minNear = 0.01, # Min near distance for camera
-            radiusRange = [3.0, 3.5], # Training camera Radius Range
-            thetaRange = [45, 105], # Training camera along the polar axis (up-down)
-            phiRange = [-180, 180], # Training camera along the azimuth axis (left-right)
-            fovyRange = [10, 30], # training camera fovy range
-            defaultRadius = 3.2, # radius for default view
-            defaultPolar = 90, # polar for default view
-            defaultAzimuth = 0, # azimuth for default view
-            defaultFovy = 20, # fovy for default view
-            progressiveView = True, # progressively expand view sampling range from default to full
-            progressiveViewInitRatio = 0.2, # initial ratio of final range
-            progressiveLevel = True, # progressively increase gridencoder's max level
+            jitterPose = True,
+            jitterCentre = 0.2,
+            jitterTarget = 0.2,
+            jitterUp = 0.02,
+            uniformSphereRate = 0,
+            gradClip = -1,
+            gradClipRGB = 1,
+            bgRadius = 1.4,
+            densityActivation = "exp",
+            densityThresh = 10,
+            blobDensity = 5,
+            blobRadius = 0.2,
+            optim = "adan",
+            w = 64,
+            h = 64,
+            knownViewScale = 1.5,
+            batchSize = 1,
+            bound = 1,
+            dtGamma = 0,
+            minNear = 0.01,
+            radiusRange=None,
+            thetaRange=None,
+            phiRange=None,
+            fovyRange=None,
+            defaultRadius = 3.2,
+            defaultPolar = 90,
+            defaultAzimuth = 0,
+            defaultFovy = 20,
+            progressiveView = True,
+            progressiveViewInitRatio = 0.2,
+            progressiveLevel = True,
             angleOverhead = 30,
             angleFront = 60,
-            tRange = [0.02, 0.98],
+            tRange=None,
             dontOverrideTRange = True,
-            lambdaEntropy = 1e-3, # loss scale for alpha entropy # should try 1e-4 # original 1e-3
-            lambdaOpacity = 0, # loss scale for alpha value
-            lambdaOrient = 1e-2, # loss scale for orientation
-            lambdaGuidance = 1, # loss scale for guidance
-            lambdaNormal = 0, # loss scale for normal map
-            lambda2dNormalSmooth = 0, # loss scale for 2d normal image smoothness
-            lambda3dNormalSmooth = 0, # loss scale for 2d normal image smoothness
-            H = 800, # Mesh height for validation
-            W = 800, # Mesh width for validation
-            datasetSizeTrain = 100, # lenght of train dataset
-            datasetSizeValid = 8, # frames to render in the turntable video in validation
-            datasetSizeTest = 100, # frames to render in the turntable video in test time
-            expStartIter = None, # start iter # for experiment, to calculate progressive_view and progressive_level
-            expEndIter = None, # end iter # for experiment, to calculate progressive_view and progressive_level
-            writeVideo = True, # write video at test
-            emaDecay = 0.95, # Exponential moving average decay for training NeRF
-            schedulerUpdateEveryStep = True, # Update scheduler every training step
+            lambdaEntropy = 1e-3,
+            lambdaOpacity = 0,
+            lambdaOrient = 1e-2,
+            lambdaGuidance = 1,
+            lambdaNormal = 0,
+            lambda2dNormalSmooth = 0,
+            lambda3dNormalSmooth = 0,
+            H = 800,
+            W = 800,
+            datasetSizeTrain = 100,
+            datasetSizeValid = 8,
+            datasetSizeTest = 100,
+            expStartIter = None,
+            expEndIter = None,
+            writeVideo = True,
+            emaDecay = 0.95,
+            schedulerUpdateEveryStep = True
     ):
+        if radiusRange is None:
+            radiusRange = [3.0, 3.5]
+        if thetaRange is None:
+            thetaRange = [45, 105]
+        if phiRange is None:
+            phiRange = [-180, 180]
+        if fovyRange is None:
+            fovyRange = [10, 30]
+        if tRange is None:
+            tRange = [0.02, 0.98]
         self.posPrompt = posPrompt
         self.negPrompt = negPrompt
         self.expName = expName

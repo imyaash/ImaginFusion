@@ -6,6 +6,17 @@ from utils.functions import circlePoses, randPoses, getRays
 
 class Dataset:
     def __init__(self, args, device, type = "train", H = 256, W = 256, size = 100):
+        """
+        Initiate the Dataset class.
+
+        Args:
+            args (object): A configuration object.
+            device (str): The device on which to perform computation.
+            type (str, optional): The datase type, either "train" or "all". Defaults to "train".
+            H (int, optional): Height of the image. Defaults to 256.
+            W (int, optional): Width of the image. Defaults to 256.
+            size (int, optional): Size of the dataset. Defaults to 100.
+        """
         super().__init__()
         self.args = args
         self.device = device
@@ -20,7 +31,17 @@ class Dataset:
         self.far = 1000
     
     def collateFn(self, idx):
+        """
+        Collate function for creating batches of data.
+
+        Args:
+            idx (list): List of indices to select data for batch.
+
+        Returns:
+            dict: A dictionary containing batched data.
+        """
         if self.training:
+            # Generate random poses and directions for training.
             poses, dirs, thetas, phis, radius = randPoses(
                 len(idx), self.device, self.args, radRange = self.args.radiusRange,
                 thetaRange = self.args.thetaRange, phiRange = self.args.phiRange,
@@ -32,6 +53,7 @@ class Dataset:
                 self.args.fovyRange[1] - self.args.fovyRange[0]
             ) + self.args.fovyRange[0]
         else:
+            # Generate fixed poses for non-training cases.
             thetas = torch.FloatTensor([self.args.defaultPolar]).to(self.device)
             phis = torch.FloatTensor([(idx[0] / self.size) * 360]).to(self.device)
             radius = torch.FloatTensor([self.args.defaultRadius]).to(self.device)
@@ -72,6 +94,15 @@ class Dataset:
         }
     
     def dataLoader(self, batchSize = None):
+        """
+        Create a DataLoader for the dataset.
+
+        Args:
+            batchSize (int, optional): The batch size. Defaults to None. If not provided, use the default batch size from args.
+
+        Returns:
+            DataLoader: A DataLoader object for the dataset.
+        """
         batchSize = batchSize or self.args.batchSize
         loader = DataLoader(
             list(
@@ -87,6 +118,12 @@ class Dataset:
         return loader
     
     def getDefaultViewData(self):
+        """
+        Get data for default view(s).
+
+        Returns:
+            dict: A dictionary containing data for default views.
+        """
         H = int(self.args.knownViewScale * self.H)
         W = int(self.args.knownViewScale * self.W)
         cx = H / 2

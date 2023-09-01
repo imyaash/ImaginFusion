@@ -17,6 +17,29 @@ from torch_ema import ExponentialMovingAverage
 from utils.functions import getCPUMem, getGPUMem
 
 class Trainer(object):
+    """
+    A class for training and evaluating a neural network model.
+
+    Args:
+        args (object): Arguments for training.
+        model (nn.Module): The neural network model.
+        guidance (object): Guidance for training.
+        expName (str): Experiment name.
+        criterion (nn.Module, optional): Loss function. Default is None.
+        optimiser (callable, optional): Optimizer for model training. Default is None.
+        lrScheduler (callable, optional): Learning rate scheduler. Default is None.
+        emaDecay (float, optional): Exponential moving average decay rate. Default is None.
+        metrics (list, optional): List of metrics for evaluation. Default is an empty list.
+        device (str, optional): Device for training (CPU or GPU). Default is None.
+        verbose (bool, optional): Whether to print verbose output. Default is True.
+        fp16 (bool, optional): Whether to use mixed-precision training. Default is False.
+        workspace (str, optional): Workspace directory for saving logs and checkpoints. Default is "workspace".
+        bestMode (str, optional): Best mode for selecting checkpoints (min or max). Default is "min".
+        useLossAsMetric (bool, optional): Whether to use loss as a metric. Default is True.
+        reportMetricAtTraining (bool, optional): Whether to report metrics during training. Default is False.
+        useTensorboardX (bool, optional): Whether to use TensorboardX for logging. Default is True.
+        schedulerUpdateEveryStep (bool, optional): Whether to update the learning rate scheduler at every step. Default is False.
+    """
     def __init__(
             self,
             args,
@@ -105,21 +128,39 @@ class Trainer(object):
     
     @torch.no_grad()
     def prepareEmbeddings(self):
+        """Prepare text embeddings used during training."""
         self.embeddings["default"] = self.guidance.getTextEmbeddings([self.args.posPrompt])
         self.embeddings["uncond"] = self.guidance.getTextEmbeddings([self.args.negPrompt])
         for d in ["front", "side", "back"]:
             self.embeddings[d] = self.guidance.getTextEmbeddings([f"RAW photo, {self.args.posPrompt}, uhd, 8k, high quality, {d} view"])
     
     def __del__(self):
+        """Destructor for cleaning up resources."""
         if self.logPtr:
             self.logPtr.close()
     
     def log(self, *args, **kwargs):
+        """
+        Log message to a file and optinally flush the file buffer.
+
+        Args:
+            args: Variable-length argument list.
+            kwargs: Arbitrary keyword arguments.
+        """
         if self.logPtr:
             print(*args, file = self.logPtr)
             self.logPtr.flush()
     
     def train_step(self, data):  # sourcery skip: low-code-quality
+        """
+        Perform a single training step.
+
+        Args:
+            data (dict): Training data.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Predicted RGB and depth values, and training loss.
+        """
         expIterRatio = (self.globalStep - self.args.expStartIter) / (self.args.expEndIter - self.args.expStartIter)
         if self.args.progressiveView:
             r = min(1.0, self.args.progressiveViewInitRatio + 2.0 * expIterRatio)
@@ -211,11 +252,21 @@ class Trainer(object):
         return predRGB, predDepth, loss
     
     def post_train_step(self):
+        """Perform post-training step actions like gradient scaling and clipping."""
         self.scaler.unscale_(self.optimiser)
         if self.args.gradClip >= 0:
             torch.nn.utils.clip_grad_value_(self.model.parameters(), self.args.gradClip)
     
     def eval_step(self, data):
+        """
+        Perform a single evaluation step.
+
+        Args:
+            data (dict): Evaluation data.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Predicted RGB and depth values, and Evaluation loss.
+        """
         raysO = data["rays_o"]
         raysD = data["rays_d"]
         mvp = data["mvp"]
@@ -235,6 +286,17 @@ class Trainer(object):
         return predRGB, predDepth, loss
     
     def test_step(self, data, bgColor = None, perturb = False):
+        """
+        Perform a single testing step.
+
+        Args:
+            data (dict): Testing data.
+            bgColor (torch.Tensor, optional): Background colour. Defaults to None.
+            perturb (bool, optional): Whether to perturb the rendering. Defaults to False.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, None]: Predicted RGB and depth values, and placeholder.
+        """
         raysO = data["rays_o"]
         raysD = data["rays_d"]
         mvp = data["mvp"]
@@ -254,6 +316,12 @@ class Trainer(object):
         return predRGB, predDepth, None
     
     def saveMesh(self, path = None):
+        """
+        Save a 3D mesh representation of the model.
+
+        Args:
+            path (str, optional): Path to save the mesh. Defaults to None.
+        """
         if path is None:
             path = os.path.join(self.workspace, "mesh")
         os.makedirs(path, exist_ok = True)
@@ -264,6 +332,13 @@ class Trainer(object):
         self.log("Finished saving mesh.")
     
     def trainOneEpoch(self, loader, maxEpochs):
+        """
+        Thrain the model for one epoch.
+
+        Args:
+            loader (torch.utils.data.DataLoader): DataLoader for training data.
+            maxEpochs (int): Maximum number of epochs.
+        """
         self.log(f"[{time.strftime('%Y-%m-%d_%H-%M-%S')}] Starting {self.workspace} Epoch {self.epoch} / {maxEpochs}, lr = {self.optimiser.param_groups[0]['lr']:.6f}...")
         totalLoss = 0
         if self.reportMetricAtTraining:
@@ -325,6 +400,13 @@ class Trainer(object):
         self.log(f"[{time.strftime('%Y-%m-%d_%H-%M-%S')}] Finished Epoch {self.epoch} / {maxEpochs}. CPU = {cpuMem:.1f}GB, GPU = {gpuMem:.1f}GB.")
     
     def evaluateOneEpoch(self, loader, name = None):
+        """
+        Evaluate the model for one epoch.
+
+        Args:
+            loader (torch.utils.data.DataLoader): DataLoader for evaluation data.
+            name (str, optional): Name for the evaluation. Defaults to None.
+        """
         self.log(f"Evaluation of {self.workspace} at epoch {self.epoch}...")
         if name is None:
             name = f"{self.expName}Epoch{self.epoch:04d}"
@@ -375,6 +457,15 @@ class Trainer(object):
         print(f"Evaluation epoch {self.epoch} finished.")
     
     def test(self, loader, savePath = None, name = None, writeVideo = True):
+        """
+        Test the model.
+
+        Args:
+            loader (torch.utils.data.DataLoader): DataLoader for testing data.
+            savePath (str, optional): Path to save test results. Defaults to None.
+            name (str, optional): Name for the test. Defaults to None.
+            writeVideo (bool, optional): Whether to write test results as video. Defaults to True.
+        """
         if savePath is None:
             savePath = os.path.join(self.workspace, "results")
         if name is None:
@@ -410,6 +501,15 @@ class Trainer(object):
         self.log("Testing finished.")
     
     def train(self, trainLoader, validLoader, testLoader, maxEpochs):
+        """
+        Train the model for multiple epochs.
+
+        Args:
+            trainLoader (torch.utils.data.DataLoader): DataLoader for training data.
+            validLoader (torch.utils.data.DataLoader): DataLoader for validation data.
+            testLoader (torch.utils.data.DataLoader): DataLoader for testing data.
+            maxEpochs (int): Maximum number of epochs.
+        """
         if self.useTensorboardX:
             self.writer = tensorboardX.SummaryWriter(os.path.join(self.workspace, "run", self.expName))
         startT = time.time()
@@ -427,6 +527,13 @@ class Trainer(object):
             self.writer.close()
     
     def evaluate(self, loader, name = None):
+        """
+        Evaluate the model on a dataset.
+
+        Args:
+            loader (torch.utils.data.DataLoader): DataLoader for evaluation data.
+            name (str, optional): Name for the evaluation. Defaults to None.
+        """
         self.useTensorboardX, useTensorboardX = False, self.useTensorboardX
         self.evaluateOneEpoch(loader, name)
         self.useTensorboardX = useTensorboardX

@@ -7,6 +7,18 @@ import torch.nn.functional as F
 from packaging import version as pver
 
 def getViewDirection(thetas, phis, oHead, front):
+    """
+    Calculated the view direction based on the angles the thetas and the phis.
+
+    Args:
+        thetas (torch.Tensor): Tensor containing theta angles in radians.
+        phis (torch.Tensor): Tensor containing phi angles in radians.
+        oHead (float): Angle overhead threshold in radians.
+        front (float): Angle front threshold in radians.
+
+    Returns:
+        torch.Tensor: A tensor of integers representing view directions.
+    """
     res = torch.zeros(thetas.shape[0], dtype = torch.long)
     phis = phis % (2 * np.pi)
     res[(phis < front / 2) | (phis >= 2 * np.pi - front / 2)] = 0
@@ -18,12 +30,31 @@ def getViewDirection(thetas, phis, oHead, front):
     return res
 
 def customMeshGrid(*args):
+    """
+    Create a mesh grid for given input tensors.
+
+    Args:
+        args: Input tensors for which the mesh grid should be created.
+
+    Returns:
+        tuple: A tuple of tensors representing the mesh grid.
+    """
     if pver.parse(torch.__version__) < pver.parse("1.10"):
         return torch.meshgrid(*args)
     else:
         return torch.meshgrid(*args, indexing = "ij")
 
 def normalise(x, eps = 1e-20):
+    """
+    Normalise a tensor.
+
+    Args:
+        x (torch.Tensor): Input tensor.
+        eps (float, optional): A small value to prevent division by zero. Defaults to 1e-20.
+
+    Returns:
+        torch.Tensor: normalised tensor.
+    """
     return x / torch.sqrt(
         torch.clamp(
             torch.sum(
@@ -34,6 +65,20 @@ def normalise(x, eps = 1e-20):
 
 @torch.cuda.amp.autocast(enabled = False)
 def getRays(poses, intrinsics, H, W, N = -1, errorMap = None):
+    """
+    Generate rays based on camera poses and intrinsics.
+
+    Args:
+        poses (torch.Tensor): Camera poses.
+        intrinsics (tuple): Camera intrinsics (fx, fy, cx, cy)
+        H (int): Image height.
+        W (int): image width.
+        N (int, optional): Number of rays to generate. Defaults to -1, generates all rays.
+        errorMap (torch.Tensor, optional): Error map for ray sampling. Defaults to None.
+
+    Returns:
+        dict: A dictionary containing ray information including origins, directions, and indices.
+    """
     device = poses.device
     B = poses.shape[0]
     fx, fy, cx, cy = intrinsics
@@ -71,6 +116,12 @@ def getRays(poses, intrinsics, H, W, N = -1, errorMap = None):
     return results
 
 def seeder(seed):
+    """
+    Set random seed for Python, NumPy, and PyTorch.
+
+    Args:
+        seed (int): Random seed value.
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -79,9 +130,21 @@ def seeder(seed):
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 def getCPUMem():
+    """
+    Get current CPU memory usage.
+
+    Returns:
+        float: Current CPU memory usage in GB.
+    """
     return psutil.Process(os.getpid()).memory_info().rss / 1024 ** 3
 
 def getGPUMem():
+    """
+    Get GPU memory usage.
+
+    Returns:
+        tuple: A tuple containing the total GPU memory and GPU memory usage for each available GPU.
+    """
     num = torch.cuda.device_count()
     mem, mems = 0, []
     for i in range(num):
@@ -99,6 +162,21 @@ def circlePoses(
         angleOverhead=30,
         angleFront=60
 ):
+    """
+    Generate circular camera poses.
+
+    Args:
+        device (str): PyTorch device.
+        radius (torch.Tensor, optional): Radius of the circle. Defaults to torch.tensor([3.2]).
+        theta (torch.Tensor, optional): Theta angles in degrees. Defaults to torch.tensor([60]).
+        phi (torch.Tensor, optional): Phi angles in degrees. Defaults to torch.tensor([0]).
+        returnDirs (bool, optional): Whether to return view directions. Defaults to False.
+        angleOverhead (int, optional): Angle overhead threshold in degrees. Defaults to 30.
+        angleFront (int, optional): Angle front threshold in degrees. Defaults to 60.
+
+    Returns:
+        tuple: A tuple containing camera poses and view directions (if returnDirs is True).
+    """
     theta = theta / 180 * np.pi
     phi = phi / 180 * np.pi
     angleOverhead = angleOverhead / 180 * np.pi
@@ -133,6 +211,24 @@ def randPoses(
         angleFront = 60,
         uniSphRate = 0.5
 ):
+    """
+    Generate random camera poses.
+
+    Args:
+        size (int): Number of camera poses to generate.
+        device (str): PyTorch device.
+        args (object): Additional arguments.
+        radRange (list, optional): Range for the radius. Defaults to None.
+        thetaRange (list, optional): Range for theta angles in degrees. Defaults to None.
+        phiRange (list, optional): Range for phi angles in degrees. Defaults to None.
+        returnDirs (bool, optional): Whether to return view directions. Defaults to False.
+        angleOverhead (int, optional): Angle overhead threshold in degrees. Defaults to 30.
+        angleFront (int, optional): Angle front threshold in degrees. Defaults to 60.
+        uniSphRate (float, optional): Rate of uniform spherical sampling. Defaults to 0.5.
+
+    Returns:
+        tuple: A tuple containing camera poses, view directions, theta angles, phi angles, and radii.
+    """
     if radRange is None:
         radRange = [1, 1.5]
     if thetaRange is None:

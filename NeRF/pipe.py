@@ -8,11 +8,19 @@ from utils.functions import seeder
 from sdm.model import StableDiffusionModel
 
 class Pipeline:
+    """
+    A class for managing the NeRF training pipeline.
+
+    Args:
+        args (object): A configuration object containing various parameters for the pipeline.
+    """
     def __init__(
             self,
             args
     ):
         self.args = args
+
+        # Calculating test interval based on the number of iterations and dataset size
         self.args.testInterval = max(int((self.args.iters / self.args.datasetSizeTrain) / 5), 10)
         self.args.expStartIter = self.args.expStartIter or 0
         self.args.expEndIter = self.args.expEndIter or self.args.iters
@@ -24,14 +32,27 @@ class Pipeline:
             self.args.fullThetaRange = self.args.thetaRange
             self.args.fullPhiRange = self.args.phiRange
             self.args.fullFovyRange = self.args.fovyRange
+        
+        # Calculating the maximum number of epochs
         self.args.maxEpochs = np.ceil(self.args.iters / (self.args.datasetSizeTrain * self.args.batchSize)).astype(np.int32)
         for key, value in self.args.__dict__.items():
             print(f"{key}: {value}")
         if self.args.seed is not None:
             seeder(int(self.args.seed))
+        
+        # Determining the device (CPU or GPU) for computation
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def loadData(self, type = "train"):
+        """
+        Load the dataset.
+
+        Args:
+            type (str, optional): The type of dataset to load ("train", "val", or "test"). Defaults to "train".
+
+        Returns:
+            DataLoader: A PyTorch DataLoader opject containing the loaded dataset.
+        """
         if type == "train":
             return Dataset(
                 args = self.args,
@@ -61,6 +82,12 @@ class Pipeline:
             ).dataLoader(batchSize = 1)
     
     def initiateNeRF(self):
+        """
+        Initialising the NeRF model.
+
+        Returns:
+            NeRF: An instance of NeRF model.
+        """
         model = NeRF(self.args).to(self.device)
         print(model)
         if self.args.optim == "adan":
@@ -78,6 +105,12 @@ class Pipeline:
         return model
     
     def initaiteGuidance(self):
+        """
+        Initialising the guidance model.
+
+        Returns:
+            StableDiffusionModel: An instance of the guidance model.
+        """
         return StableDiffusionModel(
             device = self.device,
             fp16 = self.args.fp16,
@@ -87,6 +120,16 @@ class Pipeline:
         )
     
     def trainNeRF(self, model, guidance, trainLoader, valLoader, testLoader):
+        """
+        Train the NeRF model.
+
+        Args:
+            model (NeRF): The NeRF model to be trained.
+            guidance (StableDiffusionModel): The guidance model.
+            trainLoader (DataLoader): DataLoader for training data.
+            valLoader (DataLoader): DataLoader for validation data.
+            testLoader (DataLoader): DataLoader for testing data.
+        """
         trainer = Trainer(
             args = self.args,
             expName = self.args.expName,
@@ -112,6 +155,7 @@ class Pipeline:
             trainer.saveMesh()
     
     def __call__(self):
+        """Starting the NeRF training pipeline by loading data, initialising models, and training."""
         trainLoader = self.loadData("train")
         valLoader = self.loadData("val")
         testLoader = self.loadData("test")

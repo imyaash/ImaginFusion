@@ -1,6 +1,19 @@
 import pymeshlab as pml
 
 def meshDecimator(vertices, faces, target, remesh = False, optimalPlacement = True):
+    """
+    Decimate a 3D mesh while preserving its shape.
+
+    Args:
+        vertices (numpy.ndarray): The vertices of the input mesh.
+        faces (numpy.ndarray): The faces of the input mesh.
+        target (int): The target number of faces after decimation.
+        remesh (bool, optional): Whether to remesh the mesh after decimation. Defaults to False.
+        optimalPlacement (bool, optional): Whether to use optimal placement during decimatin. Defaults to True.
+
+    Returns:
+        Tuple[numpy.ndarray, numpy.ndarray]: The vertices and faces of the decimated mesh.
+    """
 
     startVerticesShape = vertices.shape
     startFaceShape = faces.shape
@@ -22,6 +35,22 @@ def meshDecimator(vertices, faces, target, remesh = False, optimalPlacement = Tr
     return vertices, faces
 
 def meshCleaner(vertices, faces, vPct = 1, minF = 8, minD = 5, repair = True, remesh = True, remeshSize = 0.01):
+    """
+    Clean and repair a 3D mesh.
+
+    Args:
+        vertices (numpy.ndarray): The vertices of the input mesh.
+        faces (numpy.ndarray): The faces of the input mesh.
+        vPct (int, optional): Percentage of close vertices of merge. Defaults to 1.
+        minF (int, optional): Minimum number of faces in connected components to keep. Defaults to 8.
+        minD (int, optional): Minimum diameter of connected components to keep. Defaults to 5.
+        repair (bool, optional): Whether to repair non-manifold edges and vertices. Defaults to True.
+        remesh (bool, optional): Whether to remesh the mesh after cleaning. Defaults to True.
+        remeshSize (float, optional): Target edge length for remeshing. Defaults to 0.01.
+
+    Returns:
+        Tuple[numpy.ndarray, numpy.ndarray]: The vertices and faces of the cleaned and repaired mesh.
+    """
 
     startVerticesShape = vertices.shape
     startFaceShape = faces.shape
@@ -57,4 +86,4 @@ def meshCleaner(vertices, faces, vPct = 1, minF = 8, minD = 5, repair = True, re
 
     print(f"Cleaning Mesh: {startVerticesShape} ==> {vertices.shape}, {startFaceShape} ==> {faces.shape}")
 
-    return vertices, faces    
+    return vertices, faces
