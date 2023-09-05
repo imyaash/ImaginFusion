@@ -166,7 +166,7 @@ app = gr.Interface(
     # Defining the title, description, & article for the interface
     title = "ImaginFusion",
     description = "Text-To-3D Model",
-    article = "A Text-To-3D Model Implementation based on Dreamfusion paper, with Stable-Diffusion as Image Generator and TinyCudaNN based InstantNGP NeRF.",
+    article = "A Text-To-3D Model Implementation based on Dreamfusion paper, with Stable-Diffusion as Image Generator and TinyCudaNN based InstantNGP.",
     # Setting flagging of content to "never"
     allow_flagging = "never"
 )
