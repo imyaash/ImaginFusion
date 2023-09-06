@@ -21,3 +21,5 @@ opencv_python==4.5.5.64
 pymeshlab==2022.2.post4
 opencv_contrib_python==4.7.0.72
 opencv_python_headless==4.8.0.74
+./freqencoder
+./raymarching
