@@ -12,3 +12,4 @@ index.html
 interface.py
 model.py
 __pycache__/
+%ImaginFusion/chat_history/history.sqlite
