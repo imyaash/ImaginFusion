@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description = "ImaginFusionCLI")
     parser.add_argument("posPrompt", type = str, help = "Positive prompt for ImaginFusion")
     parser.add_argument("workspace", type = str, help = "Workspace for saving results")
-    parser.add_argument("--sdVersion", type = str, default = "2.1", help = "Stable Diffusion version")
+    parser.add_argument("--sdVersion", type = str, default = "1.5", help = "Stable Diffusion version")
     parser.add_argument("--hfModelKey", type = str, default = None, help = "Hugging Face model key for Stable Diffusion")
     parser.add_argument("--fp16", action = "store_true", help = "Use fp16")
     parser.add_argument("--seed", type = int, default = None, help = "Seed value")
