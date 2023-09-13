@@ -83,7 +83,7 @@ app = gr.Interface(
         # Dropdown for selecting Stable Diffusion version. Defaults to "1.5"
         gr.Dropdown(
             label="Stable Diffusion Version",
-            choices=["1.4", "1.5", "2.1", "2.1-base"],
+            choices=["1.4", "1.5", "2.0", "2.1", "2.1-base"],
             value = "1.5"
         ),
         # Textbox for HuggingFace model key for Stable Diffusion
