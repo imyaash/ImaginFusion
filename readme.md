@@ -15,9 +15,9 @@ Follow the below steps to get the application up and running.
 
 1. Download the Project and save it to the desired location.
 2. Install Dependencies: Open your command prompt (CMD) or PowerShell, navigate to the project folder, and run the following command to install the required dependencies:
-```
-setup.bat
-```
+    ```
+    setup.bat
+    ```
 3. GPU Requirements: Ensure that your system has a Nvidia GPU with atleast 8GB of VRAM. This is a crucial requirement for the application to perform efficiently.
 
 ## Usage
@@ -28,9 +28,9 @@ To use the CLI follow the these steps:
 1. Open your CMD or PowerShell.
 2. Navigate to the project folder.
 3. Run the following command to see all the available CLI options:
-```
-python cli.py -h
-```
+    ```
+    python cli.py -h
+    ```
 4. You can also find the sample CLI commands in the "testScript.bat" file.
 
 ### Graphical User Interface (GUI)
@@ -49,11 +49,52 @@ To use the GUI, follow these steps:
 3. The application might take anywhere from 25 to 150 minutes to generate a 3D model based on your system, object being generated, and the confuguration/options/arguments being used.
 
 ## Contact
-If you encounter any issues or have any questions about this application, please don't (but do) hesitate to get in touch with me on my [email](yashppanchal1997@gmail.com). Your feedback and insights are valuable for my dissertation research.
+If you encounter any issues or have any questions about this application, please don't hesitate to get in touch with me on my [email](yashppanchal1997@gmail.com). Your feedback and insights are valuable for my dissertation research.
 
-## Referred packages
-- 1
-- 2
-- 3
+## Acknowledgements
+- Credits for the brilliant [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn) and [instant-ngp](https://github.com/NVlabs/instant-ngp) goes to [Thomas Müller](https://tom94.net/).
+    ```
+    @misc{tiny-cuda-nn,
+        Author = {Thomas M\"uller},
+        Year = {2021},
+        Note = {https://github.com/nvlabs/tiny-cuda-nn},
+        Title = {Tiny {CUDA} Neural Network Framework}
+    }
+
+    @article{mueller2022instant,
+        title = {Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
+        author = {Thomas M\"uller and Alex Evans and Christoph Schied and Alexander Keller},
+        journal = {arXiv:2201.05989},
+        year = {2022},
+        month = jan
+    }
+    ```
+- Credits for [torch-ngp: A PyTorch implementation of instant-ngp](https://github.com/ashawkey/torch-ngp) goes to [Jiaxiang Tang](https://me.kiui.moe/) their implementation has been a huge help in throughout this project.
+    ```
+    @misc{torch-ngp,
+        Author = {Jiaxiang Tang},
+        Year = {2022},
+        Note = {https://github.com/ashawkey/torch-ngp},
+        Title = {Torch-ngp: a PyTorch implementation of instant-ngp}
+    }
+
+    @article{tang2022compressible,
+        title = {Compressible-composable NeRF via Rank-residual Decomposition},
+        author = {Tang, Jiaxiang and Chen, Xiaokang and Wang, Jingbo and Zeng, Gang},
+        journal = {arXiv preprint arXiv:2205.14870},
+        year = {2022}
+    }
+    ```
+- Credits for [Stable Diffusion v1.4](https://huggingface.co/CompVis/stable-diffusion-v1-4), [Stable Diffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5), [Stable Diffusion 2.0](https://huggingface.co/stabilityai/stable-diffusion-2) & [Stable Diffusion 2.1](https://huggingface.co/stabilityai/stable-diffusion-2-1) checkpoints goes to [CompVis](https://ommer-lab.com/), [Runway](https://runwayml.com/) & [Stability AI](https://stability.ai/).
+    ```
+    @InProceedings{Rombach_2022_CVPR,
+        author    = {Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj\"orn},
+        title     = {High-Resolution Image Synthesis With Latent Diffusion Models},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month     = {June},
+        year      = {2022},
+        pages     = {10684-10695}
+    }
+    ```
 
 # Thank you for using ImaginFusion!
