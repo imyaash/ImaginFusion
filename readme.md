@@ -2,6 +2,14 @@
 
 Welcome to ImaginFusion! This application is part of my Master's Dissertation project in Data Science. It allows you to generate 3D models based on natural language text, and it comes with both a Command Line Interface (CLI) and a Graphical User Interface (GUI) for your convenience.
 
+This implementation is based on the [Dreamfusion](https://dreamfusion3d.github.io/) approach, but uses [Stable Diffusion](https://github.com/CompVis/stable-diffusion) for text guided image generation instead of [Imagen](https://imagen.research.google/) and [torch-ngp](https://github.com/ashawkey/torch-ngp) instead of [Mip-NeRF](https://jonbarron.info/mipnerf/) for 3D synthesis.
+
+## System Requirements
+
+1. This project has been tested on Windows 10 with python 3.9. It is recommended to use a similar environment for optimal performance and compatibility.
+2. CPU Requirement: A modern CPU with atleast 6-cores is recommended.
+3. RAM Requirement: 16GB of RAM is highly recommended for this application to function properly.
+4. GPU Requirement: A Nvidia GPU with atleast 8GB of VRAM is mandatory for this application to function properly. Please ensure that your system meets this requirement.
 
 ## Software requirements
 Install these beforehand
@@ -38,11 +46,6 @@ To use the GUI, follow these steps:
 1. Simply double click on the "gui.py" file.
 2. Then, once the server is running, open you r web browser and navigate to "localhoast:7860". This will launch the GUI allowing you to interact with the application using an intuitive web interface.
 
-## System Requirements
-
-1. This project has been tested on Windows 10 with python 3.9. It is recommended to use a similar environment for optimal performance and compatibility.
-2. GPU Requirement: A Nvidia GPU with atleast 8GB of VRAM is mandatory for this application to function properly. Please ensure that your system meets this requirement.
-
 ## Note:
 1. The requirements may take upto an hour to install, depending on your system performance and internet speed.
 2. When you run the application for the first time, it might take longer than normal as it will download the StableDiffusion checkpoints (about 4GB) and save them to disk for repeated use.
@@ -52,7 +55,16 @@ To use the GUI, follow these steps:
 If you encounter any issues or have any questions about this application, please don't hesitate to get in touch with me on my [email](yashppanchal1997@gmail.com). Your feedback and insights are valuable for my dissertation research.
 
 ## Acknowledgements
-- Credits for the brilliant [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn) and [instant-ngp](https://github.com/NVlabs/instant-ngp) goes to [Thomas Müller](https://tom94.net/).
+- Credit for the [Dreamfusion](https://dreamfusion3d.github.io/) approach goes to [Ben Poole](https://cs.stanford.edu/~poole/).
+    ```
+    @article{poole2022dreamfusion,
+    author = {Poole, Ben and Jain, Ajay and Barron, Jonathan T. and Mildenhall, Ben},
+    title = {DreamFusion: Text-to-3D using 2D Diffusion},
+    journal = {arXiv},
+    year = {2022},
+    }
+    ```
+- Credits for the [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn) and [instant-ngp](https://github.com/NVlabs/instant-ngp) goes to [Thomas Müller](https://tom94.net/).
     ```
     @misc{tiny-cuda-nn,
         Author = {Thomas M\"uller},
@@ -69,7 +81,7 @@ If you encounter any issues or have any questions about this application, please
         month = jan
     }
     ```
-- Credits for [torch-ngp: A PyTorch implementation of instant-ngp](https://github.com/ashawkey/torch-ngp) goes to [Jiaxiang Tang](https://me.kiui.moe/) their implementation has been a huge help in throughout this project.
+- Credits for the brilliant [torch-ngp: A PyTorch implementation of instant-ngp](https://github.com/ashawkey/torch-ngp) goes to [Jiaxiang Tang](https://me.kiui.moe/) their implementation has been a huge help in throughout this project.
     ```
     @misc{torch-ngp,
         Author = {Jiaxiang Tang},
@@ -85,7 +97,7 @@ If you encounter any issues or have any questions about this application, please
         year = {2022}
     }
     ```
-- Credits for [Stable Diffusion v1.4](https://huggingface.co/CompVis/stable-diffusion-v1-4), [Stable Diffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5), [Stable Diffusion 2.0](https://huggingface.co/stabilityai/stable-diffusion-2) & [Stable Diffusion 2.1](https://huggingface.co/stabilityai/stable-diffusion-2-1) checkpoints goes to [CompVis](https://ommer-lab.com/), [Runway](https://runwayml.com/) & [Stability AI](https://stability.ai/).
+- Credits for [Stable Diffusion v1.4](https://huggingface.co/CompVis/stable-diffusion-v1-4), [Stable Diffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5), [Stable Diffusion 2.0](https://huggingface.co/stabilityai/stable-diffusion-2) & [Stable Diffusion 2.1](https://huggingface.co/stabilityai/stable-diffusion-2-1) and their checkpoints goes to [CompVis](https://ommer-lab.com/), [Runway](https://runwayml.com/) & [Stability AI](https://stability.ai/).
     ```
     @InProceedings{Rombach_2022_CVPR,
         author    = {Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj\"orn},
