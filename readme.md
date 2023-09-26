@@ -108,5 +108,14 @@ If you encounter any issues or have any questions about this application, please
         pages     = {10684-10695}
     }
     ```
+- Credit for [Gradio](https://github.com/gradio-app/gradio) framework goes to [Abubakar Abid](https://abidlabs.github.io/).
+    ```
+    @article{abid2019gradio,
+    title = {Gradio: Hassle-Free Sharing and Testing of ML Models in the Wild},
+    author = {Abid, Abubakar and Abdalla, Ali and Abid, Ali and Khan, Dawood and Alfozan, Abdulrahman and Zou, James},
+    journal = {arXiv preprint arXiv:1906.02569},
+    year = {2019},
+    }
+    ```
 
 # Thank you for using ImaginFusion!
