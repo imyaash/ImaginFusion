@@ -1,22 +1,69 @@
 # ImaginFusion Documentation
 
-ImaginFusion is an application to genareta 3D model based on natural language prompts. It is based on DreamFusion, but instead of using Imagen and Mip-NeRF to generate 2D priors and 3D synthesis respectively, uses Stable Diffusion and torch-ngp (A PyTorch implementation of InstantNGP). In includes two interfaces, CLI & GUI, for better accessibility. The installation and usage instruction in the [readme](readme.md) file.
+ImaginFusion is an application to generate 3D models based on natural language prompts. It is based on DreamFusion, but instead of using Imagen and Mip-NeRF to generate 2D priors and 3D synthesis respectively, uses Stable Diffusion and torch-ngp. It includes two interfaces, a CLI & a GUI, for better accessibility. The installation and usage instructions are in the [readme](readme.md) file.
 
-External Dependencies/Libraries Used:
-- Tiny CUDA Neural Network Framework
-- torcg-ngp: A PyTorch implementation of instant-ngp
-- Gradio: Hassle-Free Sharing and Testing of ML Models in the Wild
-- Adan: A PyTorch implementation of Adaptive Nesterov Momentum Algorithm for Faster Optimizing by Deep Models by sail-sg.
+## Table of Content
+- [Key External Libraries](#key-external-libraries)
+- [Key Internal Modules/Functions](#key-internal-modulesfunctions)
+    - [Command Line Interface/Graphical User Interface](#command-line-interfacegraphical-user-interface)
+        - [Modules Used](#modules-used)
+        - [User Inputs](#user-inputs)
+        - [Returns](#returns)
+    - [Args](#args)
+        - [Properties](#properties)
+    - [Pipeline](#pipeline)
+        - [Modules Used](#modules-used-1)
+        - [Properties](#properties-1)
+        - [Methods](#methods)
+    - [Trainer](#trainer)
+        - [Modules Used](#modules-used-2)
+        - [Properties](#properties-2)
+        - [Methods](#methods-1)
+    - [Dataset](#dataset)
+        - [Modules Used](#modules-used-3)
+        - [Properties](#properties-3)
+        - [Methods](#methods-2)
+    - [Renderer](#renderer)
+        - [Modules Used](#modules-used-4)
+        - [Properties](#properties-4)
+        - [Methods](#methods-3)
+    - [NeRF](#nerf)
+        - [Modules Used](#modules-used-5)
+        - [Properties](#properties-5)
+        - [Methods](#methods-4)
+    - [StableDiffusionModel](#stablediffusionmodel)
+        - [Properties](#properties-6)
+        - [Methods](#methods-6)
+    - [encoder](#encoder)
+    - [TruncExp](#truncexp)
+    - [softplus](#softplus)
+    - [meshDecimator](#meshdecimator)
+    - [meshCleaner](#meshcleaner)
+    - [getViewDirections](#getviewdirections)
+    - [customMeshGrid](#custommeshgrid)
+    - [normalise](#normalise)
+    - [getRays](#getrays)
+    - [getCPUMem](#getcpumem)
+    - [getGPUMem](#getgpumem)
+    - [circlePoses](#circleposes)
+    - [randPoses](#randposes)
 
-## - [Command Line Interface](cli.py)/[Graphical User Interface](gui.py)
+## Key External Libraries
+- [Tiny CUDA Neural Network Framework](https://github.com/NVlabs/tiny-cuda-nn)
+- [torch-ngp: A PyTorch implementation of instant-ngp](https://github.com/ashawkey/torch-ngp)
+- [Gradio: Hassle-Free Sharing and Testing of ML Models in the Wild](https://github.com/gradio-app/gradio)
+- [Adan: A PyTorch implementation of Adaptive Nesterov Momentum Algorithm for Faster Optimizing by Deep Models](https://github.com/sail-sg/Adan)
+
+## Key Internal Modules/Functions
+### [Command Line Interface](cli.py)/[Graphical User Interface](gui.py)
 
 These are the Entry Point for ImaginFusion application.
 
-Uses:
+#### Modules Used:
 - [Args](utils\args.py)
 - [Pipeline](NeRF\pipe.py)
 
-Takes following user inputs:
+#### User Inputs:
 - posPrompt (str): Positive prompt for ImaginFusion.
 - workspace (str): Workspace name for saving results.
 - sdVersion (str): Stable Diffusion version
@@ -33,14 +80,15 @@ Takes following user inputs:
 - datasetSizeValid (int): Size of validation dataset.
 - datasetSizeTest (int): Size of test dataset.
 
-Returns:
+#### Returns:
 - 3D Model (mesh.obj, mesh.mtl files and albedo.png)
 - 360&deg; Video
 
-## - [Args](utils\args.py)
+### [Args](utils\args.py)
 
 Stores & manages all the parameters & hyperparameters for the application. All the user inputs are initially passed here before the entire Args object is passed to the Pipeline.
 
+#### Properties:
 - posPrompt (str): A positive text prompt.
 - negPrompt (str): A negative text prompt.
 - expName (str): Experiment name.
@@ -119,27 +167,27 @@ Stores & manages all the parameters & hyperparameters for the application. All t
 - refPolars (list): Reference polar angles.
 - refAzimuths (list): Reference azimuth angles.
 
-## - [Pipeline](NeRF\pipe.py)
+### [Pipeline](NeRF\pipe.py)
 
-The class for managing the entire training pipeline. In encompasses various stages of the training prpcess, including data loading, model initialisation, and training.
+The class for managing the entire training pipeline. In encompasses various stages of the training process, including data loading, model initialisation, and training.
 
-Uses:
+#### Modules Used:
 - [NeRF](NeRF\model.py)
 - [Dataset](NeRF\data.py)
 - [Trainer](NeRF\trainer.py)
 - [seeder](utils\functions.py)
 - [StableDiffusionModel](sdm\model.py)
 
-Properties:
+#### Properties:
 - args (object): A configuration object containing various parameters for the pipeline.
 - device: The computing device (CPU or GPU) used for training.
 
-Methods:
+#### Methods:
 - loadData: Load the dataset for training, validation and testing.
     - Inputs:
         - type (str, optional): The type of dataset to load ("train", "val", or "test"). Defaults to "train".
     - Returns:
-        - DataLoader: A PyTorch DataLoader opject containing the loaded dataset.
+        - DataLoader: A PyTorch DataLoader object containing the loaded dataset.
 - InitiateNeRF: Initialises the NeRF model.
     - Returns:
         - NeRF: An instance of NeRf model.
@@ -155,15 +203,15 @@ Methods:
         - testLoader (DataLoader): DataLoader for testing data.
 - Pipeline: Starts the training pipeline by loading data, initialising models and training.
 
-## - [Trainer](NeRF\trainer.py)
+### [Trainer](NeRF\trainer.py)
 
 The class for training, evaluation & testing the Text-to-3D model.
 
-Uses:
+#### Modules Used:
 - [getCPUMem](utils\functions.py)
 - [getGPUMem](utils\functions.py)
 
-Properties:
+#### Properties:
 - args (object): Arguments for training.
 - model (nn.Module): The neural network model.
 - guidance (object): Guidance for training.
@@ -183,7 +231,7 @@ Properties:
 - useTensorboardX (bool, optional): Whether to use TensorboardX for logging. Default is True.
 - schedulerUpdateEveryStep (bool, optional): Whether to update the learning rate scheduler at every step. Default is False.
 
-Methods:
+#### Methods:
 - prepareEmbeddings: Prepares text embeddings during training.
 - log: Logs messages to a file.
     - Inputs:
@@ -235,16 +283,16 @@ Methods:
         - loader (torch.utils.data.DataLoader): DataLoader for evaluation data.
         - name (str, optional): Name for the evaluation. Defaults to None.
 
-## - [Dataset](NeRF\data.py)
+### [Dataset](NeRF\data.py)
 
 The class for managing the data used in training and inference, including camera poses, directions, intrinsics, and more & and creates DataLoader object.
 
-Uses:
+#### Modules Used:
 - [circlePose](utils\functions.py)
 - [randPose](utils\functions.py)
 - [getRays](utils\functions.py)
 
-Properties:
+#### Properties:
 - args (object): A configuration object.
 - device (str): The device on which to perform computation.
 - type (str, optional): The datase type, either "train" or "all". Defaults to "train".
@@ -252,7 +300,7 @@ Properties:
 - W (int, optional): Width of the image. Defaults to 256.
 - size (int, optional): Size of the dataset. Defaults to 100.
 
-Methods:
+#### Methods:
 - collateFn: Collate function for creating batches of data.
     - Inputs:
         - idx (list): List of indices to select data for batch.
@@ -267,17 +315,17 @@ Methods:
     - Returns:
         - dict: A dictionary containing data for default views.
 
-## - [Renderer](NeRF\renderer.py)
+### [Renderer](NeRF\renderer.py)
 
 The class for rendering 3D scenes, conducting raymarching, exporting 3D meshes, and managing density grids.
 
-Uses:
+#### Modules Used:
 - [meshDecimator](utils\mesh.py)
 - [meshCleaner](utils\mesh.py)
 - [customMeshGrid](utils\functions.py)
 - [normalise](utils\functions.py)
 
-Properties:
+#### Properties:
 - args (dict): Configuration arguments.
 - bound (float): The bounding box size.
 - cascade (int): Number of cascades.
@@ -291,7 +339,7 @@ Properties:
 - meanDensity (float): Mean density value.
 - iterDensity (int): Iteration count for density updates.
 
-Methods:
+#### Methods:
 - densityBlob: Calculate density values for given points.
     - Inputs:
         - x (torch.Tensor): Input points with shape [B, N, 3].
@@ -329,18 +377,18 @@ Methods:
     - Returns:
         - dict: Rendered image, depth & weights.
 
-## - [NeRF](NeRF\model.py)
+### [NeRF](NeRF\model.py)
 
 The main instantNGP model (torch-ngp). Inherits Renderer and extends from it.
 
-Uses:
+#### Modules Used:
 - [Renderer](NeRF\renderer.py)
 - [encoder](utils\encoder.py)
 - [normalise](utils\functions.py)
 - [truncExp](utils\activator.py)
 - [softplus](utils\activator.py)
 
-Properties:
+#### Properties:
 - nLayers (int): Number of layers in the NeRF network.
 - hiddenDim (int): Hidden dimension of the NeRF network.
 - encoder (tcnn.Encoding): TinyCUDA neural network encoder.
@@ -353,7 +401,7 @@ Properties:
 - inDimBG (int): Input dimension of the background encoder.
 - netBG (Network): Background network.
 
-Methods:
+#### Methods:
 - forwardC: Forward pass for NeRF color prediction.
     - Inputs:
         - x (torch.Tensor): Input coordinates.
@@ -389,11 +437,11 @@ Methods:
     - Returns:
         - List[Dist[str, Union[nn.Parameter, float]]]: List of parameter dictionaries.
 
-## - [StableDiffusionModel](sdm\model.py)
+### [StableDiffusionModel](sdm\model.py)
 
 An implementation of Stable Diffusion to generate images based on natural language propmts and act as guiding model for NeRF.
 
-Properties:
+#### Properties:
 - device (str): The device on which the model is running.
 - version (str): The version of the stable diffusion model being used.
 - modelPath (str): The path to the pretrained stable-diffusion model.
@@ -408,7 +456,7 @@ Properties:
 - maxSteps (int): The maximum number of diffusion steps in the specified range.
 - alphas (torch.Tensor): The alpha values used in the diffusion process.
 
-Methods:
+#### Methods:
 - getTextEmbeddings: Get text embeddings for a given prompt.
     - Inputs:
         - prompt (str): The text prompt for which embeddings are to be generated.
@@ -445,58 +493,62 @@ Methods:
     - Returns:
         - torch.Tensor: Training loss
 
-## - [encoder](utils\encoder.py)
+### [encoder](utils\encoder.py)
 
 Function to create a FreqEncoder instance.
 
-Inputs:
+#### Inputs:
+
 - inDim (int, optional): The input dimension. Defaults to 3.
 - multiRes (int, optional): The degree of multi-resolution encoding. Defaults to 6.
 
-Returns:
+#### Returns:
+
 -Tuple: A tuple containing the frequency encoder and its output dimension.
 
-## - [TruncExp](utils\activator.py)
+### [TruncExp](utils\activator.py)
 
 Custom autograd Function for the truncated exponential operation. This function computes the exponential of input values while clamping the output to a maximum value of 15.
 
-Inputs:
+#### Inputs:
+
 - ctx (Context): A PyTorch context object to save intermediate values for backpropagation.
 - x (Tensor): The input tensor to compute the truncated exponential for.
 
-Returns:
+#### Returns:
+
 - Tensor: The tensor containing the truncated exponential of the input values.
 
-## - [softplus](utils\activator.py)
+### [softplus](utils\activator.py)
 
 Fuction to compute biased softplus activation. The softplus function is defined as softplus(x) = ln(1 + exp(x)), and this implementation allows an optional bias to be applied before computing the softplus.
 
-Inputs:
+#### Inputs:
 - x (Tensor): The input tensor to apply the softplus activation to.
 - bias (float): An optional bias value to be subtracted from the input tensor before applying softplus.
 
-Returns:
+#### Returns:
 - Tensor: The tensor containing the softplus activations.
 
-## - [meshDecimator](utils\mesh.py)
+### [meshDecimator](utils\mesh.py)
 
 Function to decimate a mesh while preserving it's shape.
 
-Inputs:
+#### Inputs:
 - vertices (numpy.ndarray): The vertices of the input mesh.
 - faces (numpy.ndarray): The faces of the input mesh.
 - target (int): The target number of faces after decimation.
 - remesh (bool, optional): Whether to remesh the mesh after decimation. Defaults to False.
 - optimalPlacement (bool, optional): Whether to use optimal placement during decimatin. Defaults to True.
 
-Returns:
+#### Returns:
 - Tuple[numpy.ndarray, numpy.ndarray]: The vertices and faces of the decimated mesh.
 
-## - [meshCleaner](utils\mesh.py)
+### [meshCleaner](utils\mesh.py)
 
 Function to clean and repair 3D mesh.
 
-Inputs:
+#### Inputs:
 - vertices (numpy.ndarray): The vertices of the input mesh.
 - faces (numpy.ndarray): The faces of the input mesh.
 - vPct (int, optional): Percentage of close vertices of merge. Defaults to 1.
@@ -506,48 +558,48 @@ Inputs:
 - remesh (bool, optional): Whether to remesh the mesh after cleaning. Defaults to True.
 - remeshSize (float, optional): Target edge length for remeshing. Defaults to 0.01.
 
-Returns:
+#### Returns:
 - Tuple[numpy.ndarray, numpy.ndarray]: The vertices and faces of the cleaned and repaired mesh.
 
-## - [getViewDirections](utils\functions.py)
+### [getViewDirections](utils\functions.py)
 
 Function to calculate the view direction based on the angles, the thetas, and the phis.
 
-Inputs:
+#### Inputs:
 - thetas (torch.Tensor): Tensor containing theta angles in radians.
 - phis (torch.Tensor): Tensor containing phi angles in radians.
 - oHead (float): Angle overhead threshold in radians.
 - front (float): Angle front threshold in radians.
 
-Returns:
+#### Returns:
 - torch.Tensor: A tensor of integers representing view directions.
 
-## - [customMeshGrid](utils\functions.py)
+### [customMeshGrid](utils\functions.py)
 
 Function to create a mesh grid for given input tensors.
 
-Inputs:
+#### Inputs:
 - args: Input tensors for which the mesh grid should be created.
 
-Returns:
+#### Returns:
 - tuple: A tuple of tensors representing the mesh grid.
 
-## - [normalise](utils\functions.py)
+### [normalise](utils\functions.py)
 
 Function to normalise a tensor.
 
-Inputs:
+#### Inputs:
 - x (torch.Tensor): Input tensor.
 - eps (float, optional): A small value to prevent division by zero. Defaults to 1e-20.
 
-Returns:
+#### Returns:
 - torch.Tensor: normalised tensor.
 
-## - [getRays](utils\functions.py)
+### [getRays](utils\functions.py)
 
 Function to generate rays based on camera poses and intrinsics.
 
-Inputs:
+#### Inputs:
 - poses (torch.Tensor): Camera poses.
 - intrinsics (tuple): Camera intrinsics (fx, fy, cx, cy)
 - H (int): Image height.
@@ -555,35 +607,35 @@ Inputs:
 - N (int, optional): Number of rays to generate. Defaults to -1, generates all rays.
 - errorMap (torch.Tensor, optional): Error map for ray sampling. Defaults to None.
 
-Returns:
+#### Returns:
 - dict: A dictionary containing ray information including origins, directions, and indices.
 
-## - [seeder](utils\functions.py)
+### [seeder](utils\functions.py)
 
 Function to set random seed for Python, NumPy, and PyTorch.
 
-Inputs:
+#### Inputs:
 - seed (int): Random seed value.
 
-## - [getCPUMem](utils\functions.py)
+### [getCPUMem](utils\functions.py)
 
 Function to get current memory usage.
 
-Returns:
+#### Returns:
 - float: Current CPU memory usage in GB.
 
-## - [getGPUMem](utils\functions.py)
+### [getGPUMem](utils\functions.py)
 
 Function to get current GPU usage.
 
-Returns:
+#### Returns:
 - tuple: A tuple containing the total GPU memory and GPU memory usage for each available GPU.
 
-## - [circlePoses](utils\functions.py)
+### [circlePoses](utils\functions.py)
 
 Function to generate circular camera poses.
 
-Inputs:
+#### Inputs:
 - device (str): PyTorch device.
 - radius (torch.Tensor, optional): Radius of the circle. Defaults to torch.tensor([3.2]).
 - theta (torch.Tensor, optional): Theta angles in degrees. Defaults to torch.tensor([60]).
@@ -592,14 +644,14 @@ Inputs:
 - angleOverhead (int, optional): Angle overhead threshold in degrees. Defaults to 30.
 - angleFront (int, optional): Angle front threshold in degrees. Defaults to 60.
 
-Returns:
+#### Returns:
 - tuple: A tuple containing camera poses and view directions (if returnDirs is True).
 
-## - [randomPoses](utils\functions.py)
+### [randPoses](utils\functions.py)
 
 Function to genarate random camera poses.
 
-Args:
+#### Inputs:
 - size (int): Number of camera poses to generate.
 - device (str): PyTorch device.
 - args (object): Additional arguments.
@@ -611,5 +663,5 @@ Args:
 - angleFront (int, optional): Angle front threshold in degrees. Defaults to 60.
 - uniSphRate (float, optional): Rate of uniform spherical sampling. Defaults to 0.5.
 
-Returns:
+#### Returns:
 - tuple: A tuple containing camera poses, view directions, theta angles, phi angles, and radii.

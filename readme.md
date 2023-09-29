@@ -64,21 +64,15 @@ If you encounter any issues or have any questions about this application, please
     year = {2022},
     }
     ```
-- Credits for the [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn) and [instant-ngp](https://github.com/NVlabs/instant-ngp) goes to [Thomas Müller](https://tom94.net/).
+- Credits for [Stable Diffusion v1.4](https://huggingface.co/CompVis/stable-diffusion-v1-4), [Stable Diffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5), [Stable Diffusion 2.0](https://huggingface.co/stabilityai/stable-diffusion-2) & [Stable Diffusion 2.1](https://huggingface.co/stabilityai/stable-diffusion-2-1) and their checkpoints goes to [CompVis](https://ommer-lab.com/), [Runway](https://runwayml.com/) & [Stability AI](https://stability.ai/).
     ```
-    @misc{tiny-cuda-nn,
-        Author = {Thomas M\"uller},
-        Year = {2021},
-        Note = {https://github.com/nvlabs/tiny-cuda-nn},
-        Title = {Tiny {CUDA} Neural Network Framework}
-    }
-
-    @article{mueller2022instant,
-        title = {Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
-        author = {Thomas M\"uller and Alex Evans and Christoph Schied and Alexander Keller},
-        journal = {arXiv:2201.05989},
-        year = {2022},
-        month = jan
+    @InProceedings{Rombach_2022_CVPR,
+        author    = {Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj\"orn},
+        title     = {High-Resolution Image Synthesis With Latent Diffusion Models},
+        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+        month     = {June},
+        year      = {2022},
+        pages     = {10684-10695}
     }
     ```
 - Credits for the brilliant [torch-ngp: A PyTorch implementation of instant-ngp](https://github.com/ashawkey/torch-ngp) goes to [Jiaxiang Tang](https://me.kiui.moe/) their implementation has been a huge help in throughout this project.
@@ -97,15 +91,21 @@ If you encounter any issues or have any questions about this application, please
         year = {2022}
     }
     ```
-- Credits for [Stable Diffusion v1.4](https://huggingface.co/CompVis/stable-diffusion-v1-4), [Stable Diffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5), [Stable Diffusion 2.0](https://huggingface.co/stabilityai/stable-diffusion-2) & [Stable Diffusion 2.1](https://huggingface.co/stabilityai/stable-diffusion-2-1) and their checkpoints goes to [CompVis](https://ommer-lab.com/), [Runway](https://runwayml.com/) & [Stability AI](https://stability.ai/).
+- Credits for the [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn) and [instant-ngp](https://github.com/NVlabs/instant-ngp) goes to [Thomas Müller](https://tom94.net/).
     ```
-    @InProceedings{Rombach_2022_CVPR,
-        author    = {Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj\"orn},
-        title     = {High-Resolution Image Synthesis With Latent Diffusion Models},
-        booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-        month     = {June},
-        year      = {2022},
-        pages     = {10684-10695}
+    @misc{tiny-cuda-nn,
+        Author = {Thomas M\"uller},
+        Year = {2021},
+        Note = {https://github.com/nvlabs/tiny-cuda-nn},
+        Title = {Tiny {CUDA} Neural Network Framework}
+    }
+
+    @article{mueller2022instant,
+        title = {Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
+        author = {Thomas M\"uller and Alex Evans and Christoph Schied and Alexander Keller},
+        journal = {arXiv:2201.05989},
+        year = {2022},
+        month = jan
     }
     ```
 - Credit for [Gradio](https://github.com/gradio-app/gradio) framework goes to [Abubakar Abid](https://abidlabs.github.io/).
@@ -115,6 +115,15 @@ If you encounter any issues or have any questions about this application, please
     author = {Abid, Abubakar and Abdalla, Ali and Abid, Ali and Khan, Dawood and Alfozan, Abdulrahman and Zou, James},
     journal = {arXiv preprint arXiv:1906.02569},
     year = {2019},
+    }
+    ```
+- Credit fot [Adan](https://github.com/sail-sg/Adan) optimiser goes to [Xingyu Xie](https://zero-lab-pku.github.io/personwise/xiexingyu/).
+    ```
+    @article{xie2022adan,
+    title={Adan: Adaptive Nesterov Momentum Algorithm for Faster Optimizing Deep Models},
+    author={Xie, Xingyu and Zhou, Pan and Li, Huan and Lin, Zhouchen and Yan, Shuicheng},
+    journal={arXiv preprint arXiv:2208.06677},
+    year={2022}
     }
     ```
 
