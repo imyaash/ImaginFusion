@@ -1,4 +1,4 @@
-from freqencoder import FreqEncoder
+from modules.freqencoder import FreqEncoder
 
 def encoder(inDim = 3, multiRes = 6):
     """

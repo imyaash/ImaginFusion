@@ -1,8 +1,19 @@
-# ImaginFusion: A text guided 3D model generation application.
+# ImaginFusion: A Text Guided 3D Model Generation Application.
 
-Welcome to ImaginFusion! This application is part of my Master's Dissertation project in Data Science. It allows you to generate 3D models based on natural language text, and it comes with both a Command Line Interface (CLI) and a Graphical User Interface (GUI) for your convenience.
+Welcome to ImaginFusion!
+
+*This application is part of my Master's Dissertation project in Data Science.*
+
+ImaginFusion allows you to generate 3D models based on natural language prompts, and it comes with both a Command Line Interface (CLI) and a Graphical User Interface (GUI) for your convenience.
 
 This implementation is based on the [Dreamfusion](https://dreamfusion3d.github.io/) approach, but uses [Stable Diffusion](https://github.com/CompVis/stable-diffusion) for text guided image generation instead of [Imagen](https://imagen.research.google/) and [torch-ngp](https://github.com/ashawkey/torch-ngp) instead of [Mip-NeRF](https://jonbarron.info/mipnerf/) for 3D synthesis.
+
+## Objectives
+
+The main objectives of this project were as follows
+1. Demonstrating feasibility of Text-to-3D generation with modular models/libraries, and without relying on labelled 3D data.
+2. Maximising photorealism, speed & usability through model selection and optimisation.
+3. Enhancing accessibility through intuitive user-interfaces.
 
 ## System Requirements
 
@@ -39,7 +50,7 @@ To use the CLI follow the these steps:
     ```
     python cli.py -h
     ```
-4. You can also find the sample CLI commands in the "testScript.bat" file.
+4. You can also find the sample CLI commands in [this](sampleCmd.md) file.
 
 ### Graphical User Interface (GUI)
 To use the GUI, follow these steps:
@@ -117,7 +128,7 @@ If you encounter any issues or have any questions about this application, please
     year = {2019},
     }
     ```
-- Credit fot [Adan](https://github.com/sail-sg/Adan) optimiser goes to [Xingyu Xie](https://zero-lab-pku.github.io/personwise/xiexingyu/).
+- Credit for [Adan](https://github.com/sail-sg/Adan) optimiser goes to [Xingyu Xie](https://zero-lab-pku.github.io/personwise/xiexingyu/).
     ```
     @article{xie2022adan,
     title={Adan: Adaptive Nesterov Momentum Algorithm for Faster Optimizing Deep Models},
@@ -126,5 +137,25 @@ If you encounter any issues or have any questions about this application, please
     year={2022}
     }
     ```
+- Credit to the [diffusers](https://github.com/huggingface/diffusers) library.
+    ```
+    @misc{von-platen-etal-2022-diffusers,
+    author = {Patrick von Platen and Suraj Patil and Anton Lozhkov and Pedro Cuenca and Nathan Lambert and Kashif Rasul and Mishig Davaadorj and Thomas Wolf},
+    title = {Diffusers: State-of-the-art diffusion models},
+    year = {2022},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/huggingface/diffusers}}
+    }
+    ```
 
+## Citation
+```
+@misc{ImaginFusion,
+    Author = {Yash Panchal},
+    Year = {2023},
+    Note = {https://github.com/imyaash/ImaginFusion},
+    Title = {ImaginFusion: A Text Guided 3D Model Generation Application}
+}
+```
 # Thank you for using ImaginFusion!

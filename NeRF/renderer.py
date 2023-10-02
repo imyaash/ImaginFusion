@@ -3,9 +3,9 @@ import cv2
 import math
 import torch
 import mcubes
-import raymarching
 import numpy as np
 import torch.nn as nn
+from modules import raymarching
 from utils.mesh import meshDecimator, meshCleaner
 from utils.functions import customMeshGrid, normalise
 
